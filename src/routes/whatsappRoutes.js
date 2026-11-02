@@ -24,6 +24,9 @@ router.get('/webhook', (req, res) => {
 // POST: RECEPCIÓN Y RESPUESTA DE MENSAJES
 // ==========================================
 router.post('/webhook', async (req, res) => {
+    // 🚨 EL RADAR: Esto imprimirá TODO lo que llegue, sin importar su estructura
+    console.log("🔔 [WEBHOOK RECIBIDO] ->", JSON.stringify(req.body, null, 2));
+
     const body = req.body;
 
     // Validamos que sea un evento de WhatsApp
@@ -32,12 +35,11 @@ router.post('/webhook', async (req, res) => {
             
             const phone_number_id = process.env.WHATSAPP_PHONE_ID;
             const api_token = process.env.WHATSAPP_API_TOKEN;
-            const from = body.entry[0].changes[0].value.messages[0].from; // Número del cliente
-            const msg_body = body.entry[0].changes[0].value.messages[0].text.body; // Texto que envió el cliente
+            const from = body.entry[0].changes[0].value.messages[0].from; 
+            const msg_body = body.entry[0].changes[0].value.messages[0].text ? body.entry[0].changes[0].value.messages[0].text.body : "[No es texto]"; 
 
-            console.log(`📨 Mensaje recibido de ${from}: ${msg_body}`);
+            console.log(`📨 Mensaje detectado de ${from}: ${msg_body}`);
 
-            // Construimos el mensaje de respuesta
             try {
                 const response = await fetch(`https://graph.facebook.com/v17.0/${phone_number_id}/messages`, {
                     method: 'POST',
@@ -48,7 +50,7 @@ router.post('/webhook', async (req, res) => {
                     body: JSON.stringify({
                         messaging_product: 'whatsapp',
                         to: from,
-                        text: { body: `¡Hola! Soy el sistema automatizado del SaaS MascotasIADev 🐾. He recibido tu mensaje: "${msg_body}"` }
+                        text: { body: `¡Hola! Soy el sistema automatizado del SaaS MascotasIADev 🐾. Recibí: "${msg_body}"` }
                     })
                 });
 
@@ -58,11 +60,9 @@ router.post('/webhook', async (req, res) => {
                     console.error('❌ Error de Meta al enviar respuesta:', await response.text());
                 }
             } catch (error) {
-                console.error('❌ Error interno al intentar enviar el mensaje:', error);
+                console.error('❌ Error interno en fetch:', error);
             }
         }
-        
-        // Siempre debemos devolver un 200 a Meta para que no reintente el envío
         res.sendStatus(200);
     } else {
         res.sendStatus(404);
