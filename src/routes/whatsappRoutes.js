@@ -19,7 +19,6 @@ router.get('/webhook', (req, res) => {
             return res.sendStatus(403);
         }
     }
-    // Si entras desde el navegador Chrome directo a la ruta, verás esto:
     res.status(200).send('🟢 El buzón del Webhook está vivo y escuchando en /api/whatsapp/webhook');
 });
 
@@ -28,21 +27,28 @@ router.get('/webhook', (req, res) => {
 // ==========================================
 router.post('/webhook', async (req, res) => {
     console.log("🔔 [ENTRÓ AL WEBHOOK OFICIAL]");
-    const body = req.body;
-
-    if (body.object) {
-        const changes = body.entry?.[0]?.changes?.[0]?.value;
+    
+    try {
+        const body = req.body;
         
-        if (changes && changes.messages && changes.messages[0]) {
-            const phone_number_id = process.env.WHATSAPP_PHONE_ID || changes.metadata?.phone_number_id;
-            const api_token = process.env.WHATSAPP_API_TOKEN;
-            const from = changes.messages[0].from; 
-            const msg_body = changes.messages[0].text ? changes.messages[0].text.body : "[Mensaje multimedia/botón]"; 
+        // Verificamos si es un evento de WhatsApp Business
+        if (body.object === 'whatsapp_business_account') {
+            const entry = body.entry?.[0];
+            const changes = entry?.changes?.[0];
+            const value = changes?.value;
 
-            console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
-            console.log(`🔑 Estado de llaves en Render -> PHONE_ID: ${phone_number_id ? 'OK' : 'FALTA'} | TOKEN: ${api_token ? 'OK' : 'FALTA'}`);
+            // Extraemos el mensaje de forma segura por si viene anidado diferente
+            const message = value?.messages?.[0];
 
-            try {
+            if (message && message.text) {
+                const phone_number_id = process.env.WHATSAPP_PHONE_ID || value?.metadata?.phone_number_id;
+                const api_token = process.env.WHATSAPP_API_TOKEN;
+                const from = message.from; 
+                const msg_body = message.text.body; 
+
+                console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
+                console.log(`🔑 Estado de llaves -> PHONE_ID: ${phone_number_id ? 'OK' : 'FALTA'} | TOKEN: ${api_token ? 'OK' : 'FALTA'}`);
+
                 const response = await fetch(`https://graph.facebook.com/v21.0/${phone_number_id}/messages`, {
                     method: 'POST',
                     headers: {
@@ -62,16 +68,16 @@ router.post('/webhook', async (req, res) => {
                 } else {
                     console.error('❌ Meta rechazó el envío de la respuesta:', resData);
                 }
-            } catch (error) {
-                console.error('❌ Error interno al conectar con Meta:', error);
+            } else {
+                console.log("ℹ️ El evento recibido no contiene un mensaje de texto plano (pueden ser estados o multimedia).");
             }
-        } else if (changes && changes.statuses) {
-            console.log(`ℹ️ Confirmación de estado de Meta (entregado/leído) recibida.`);
         }
-        return res.sendStatus(200);
-    } else {
-        return res.sendStatus(404);
+    } catch (err) {
+        console.error('❌ Error crítico procesando el Webhook:', err);
     }
+
+    // Siempre respondemos 200 OK inmediatamente a Meta para evitar bloqueos
+    return res.sendStatus(200);
 });
 
 module.exports = router;
