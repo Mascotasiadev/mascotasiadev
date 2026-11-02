@@ -49,7 +49,7 @@ router.post('/webhook', async (req, res) => {
                 console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
                 console.log(`🔑 Estado de llaves -> PHONE_ID: ${phone_number_id ? 'OK' : 'FALTA'} | TOKEN: ${api_token ? 'OK' : 'FALTA'}`);
 
-                const response = await fetch(`https://graph.facebook.com/v21.0/${phone_number_id}/messages`, {
+                const response = await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${api_token}`,
