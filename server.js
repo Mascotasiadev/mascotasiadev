@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 
-// Importamos las rutas del Webhook que creaste
+// Importamos las rutas del Webhook
 const whatsappRoutes = require('./src/routes/whatsappRoutes'); 
 
 const app = express();
@@ -12,10 +12,23 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 
 // ==========================================
-// RUTA RAÍZ (LA SOLUCIÓN PARA META)
+// RUTA RAÍZ (FORMATO HTML PARA APROBACIÓN DE META)
 // ==========================================
 app.get('/', (req, res) => {
-    res.status(200).send('Política de Privacidad y Términos de Servicio del SaaS MascotasIADev.');
+    const html = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <title>Política de Privacidad</title>
+        </head>
+        <body>
+            <h1>Política de Privacidad y Términos de Servicio</h1>
+            <p>Esta es la política de privacidad oficial del SaaS MascotasIADev.</p>
+        </body>
+        </html>
+    `;
+    res.status(200).send(html);
 });
 
 // ==========================================
