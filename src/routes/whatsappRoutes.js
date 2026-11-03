@@ -2,20 +2,12 @@ const express = require('express');
 const router = express.Router();
 const Contact = require('../models/Contact');
 
-// --- CEREBRO DE INTELIGENCIA ARTIFICIAL (Comercial / B2B Adaptativo) ---
+// --- CEREBRO DE INTELIGENCIA ARTIFICIAL (Patrón robusto de Forestadent) ---
 async function generarRespuestaConIA(waName, msgBody) {
     const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-1.5-flash'];
-    
-    // Prompt comercial adaptativo para dueños de negocios de mascotas
-    const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial diseñado para automatizar la atención y aumentar las ventas de veterinarias, spas, pet shops y hoteles de mascotas.
-    El usuario que te escribe se llama ${waName}. 
-    
-    Tu objetivo al responderle a este dueño de negocio es:
-    1. Explicarle con entusiasmo y de forma muy persuasiva (máximo 2 párrafos cortos) qué valor le aporta el sistema: actúa como un recepcionista virtual inteligente que trabaja 24/7, responde dudas, agenda citas automáticamente y asegura que ningún cliente se quede sin atender, ahorrándole costos y dándole control de su tiempo.
-    2. Como no sabes exactamente si tiene una veterinaria, un pet shop o un spa, mantén los ejemplos generales (negocios de mascotas).
-    3. **Termina siempre con una pregunta estratégica orientada a conocer su negocio y avanzar en la venta**, por ejemplo preguntándole: "Cuéntame, ¿qué tipo de negocio de mascotas tienes (veterinaria, spa, pet shop) y cuántas personas atienden al día?"
-
-    Mensaje del cliente: "${msgBody}"`;
+    const prompt = `Eres un amable, profesional y experto recepcionista virtual de un Spa y Veterinaria de Mascotas llamado MascotasIADev. 
+    El cliente con el que hablas se llama ${waName}. 
+    Responde de manera concisa (máximo 2 párrafos cortos), cálida y usando algún emoji relacionado con mascotas al siguiente mensaje del cliente: "${msgBody}"`;
 
     for (const modelo of modelos) {
         try {
@@ -35,11 +27,12 @@ async function generarRespuestaConIA(waName, msgBody) {
                 return data.candidates[0].content.parts[0].text.trim();
             }
         } catch (error) { 
-            continue; 
+            continue; // Si falla un modelo, intenta automáticamente con el siguiente
         }
     }
     
-    return `¡Hola ${waName}! MascotasIADev automatiza tu negocio de mascotas con IA para que vendas más y ahorres tiempo 24/7 🐾. ¿Qué tipo de negocio tienes (veterinaria, spa o pet shop)?`;
+    // Respuesta de respaldo si todos los modelos fallan
+    return `¡Hola ${waName}! En este momento nuestros sistemas están ocupados, ¿puedes escribirme en un minuto? 🐾`;
 }
 
 // --- 1. VERIFICACIÓN DEL WEBHOOK (Meta) ---
@@ -96,9 +89,9 @@ router.post('/webhook', async (req, res) => {
                         console.error("❌ Error guardando en MongoDB:", dbError);
                     }
 
-                    // 2. Cerebro: Consultar IA con enfoque comercial adaptativo
+                    // 2. Cerebro: Consultar IA con respaldo de modelos múltiples
                     const respuestaFinal = await generarRespuestaConIA(waName, msg_body);
-                    console.log("🧠 Respuesta IA comercial generada con éxito");
+                    console.log("🧠 Respuesta IA generada con éxito");
 
                     // 3. Respuesta: Enviar de vuelta a WhatsApp vía Graph API v25.0
                     const response = await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
