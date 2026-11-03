@@ -1,14 +1,17 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors'); // 👈 NUEVO: Necesario para que el panel web se conecte
 
-// Importamos las rutas del Webhook
+// Importamos las rutas
 const whatsappRoutes = require('./src/routes/whatsappRoutes'); 
+const dashboardRoutes = require('./src/routes/dashboardRoutes'); // 👈 NUEVO: Importamos las rutas del panel
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware para que el servidor entienda formato JSON
+// Middleware para seguridad y formato
+app.use(cors()); // 👈 NUEVO: Habilita la conexión externa
 app.use(express.json());
 
 // ====================================================
@@ -50,9 +53,10 @@ app.post('/', (req, res) => {
 });
 
 // ====================================================
-// RUTAS DE LA API (WEBHOOK)
+// RUTAS DE LA API (WEBHOOK Y PANEL)
 // ====================================================
 app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/dashboard', dashboardRoutes); // 👈 NUEVO: Activamos el túnel para tu panel web
 
 // ====================================================
 // MODELO MULTI-TENANT Y SEMILLA AUTOMÁTICA EN MONGODB
