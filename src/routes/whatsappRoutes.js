@@ -5,7 +5,7 @@ const Lead = require('../models/Lead');
 
 // --- CEREBRO DE INTELIGENCIA ARTIFICIAL CON CAPTURADOR DE LEADS ---
 async function generarRespuestaConIA(waName, msgBody) {
-    const modelos = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-flash-latest'];
+    const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial para veterinarias, spas y pet shops. 
     El usuario que te escribe se llama ${waName}. 
     
