@@ -1,9 +1,41 @@
 const express = require('express');
 const router = express.Router();
 const Contact = require('../models/Contact');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// 1. Verificación del Webhook (Para cuando Meta revisa el puente)
+// --- CEREBRO DE INTELIGENCIA ARTIFICIAL (Patrón robusto de Forestadent) ---
+async function generarRespuestaConIA(waName, msgBody) {
+    const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-1.5-flash'];
+    const prompt = `Eres un amable, profesional y experto recepcionista virtual de un Spa y Veterinaria de Mascotas llamado MascotasIADev. 
+    El cliente con el que hablas se llama ${waName}. 
+    Responde de manera concisa (máximo 2 párrafos cortos), cálida y usando algún emoji relacionado con mascotas al siguiente mensaje del cliente: "${msgBody}"`;
+
+    for (const modelo of modelos) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    contents: [{ parts: [{ text: prompt }] }] 
+                })
+            });
+            const data = await response.json();
+            
+            if (data.error) continue; 
+            
+            if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
+                return data.candidates[0].content.parts[0].text.trim();
+            }
+        } catch (error) { 
+            continue; // Si falla un modelo, intenta automáticamente con el siguiente
+        }
+    }
+    
+    // Respuesta de respaldo si todos los modelos fallan
+    return `¡Hola ${waName}! En este momento nuestros sistemas están ocupados, ¿puedes escribirme en un minuto? 🐾`;
+}
+
+// --- 1. VERIFICACIÓN DEL WEBHOOK (Meta) ---
 router.get('/webhook', (req, res) => {
     const verify_token = process.env.WHATSAPP_VERIFY_TOKEN;
     const mode = req.query['hub.mode'];
@@ -22,7 +54,7 @@ router.get('/webhook', (req, res) => {
     }
 });
 
-// 2. Recepción y Procesamiento de Mensajes
+// --- 2. RECEPCIÓN Y PROCESAMIENTO DE MENSAJES ---
 router.post('/webhook', async (req, res) => {
     const body = req.body;
 
@@ -45,7 +77,7 @@ router.post('/webhook', async (req, res) => {
                     const msg_body = message.text.body;
                     console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
 
-                    // --- INICIO BLOQUE MEMORIA (MongoDB) ---
+                    // 1. Memoria: Guardar o actualizar en MongoDB Atlas
                     try {
                         await Contact.findOneAndUpdate(
                             { phoneNumber: from }, 
@@ -56,28 +88,12 @@ router.post('/webhook', async (req, res) => {
                     } catch (dbError) {
                         console.error("❌ Error guardando en MongoDB:", dbError);
                     }
-                    // --- FIN BLOQUE MEMORIA ---
 
-                    // --- INICIO BLOQUE IA (GEMINI) ---
-                    let respuestaFinal = "";
-                    try {
-                        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-                        const model = genAI.getGenerativeModel({ model: "gemini-3.8-flash" });
-                        
-                        const prompt = `Eres un amable, profesional y experto recepcionista virtual de un Spa y Veterinaria de Mascotas llamado MascotasIADev. 
-                        El cliente con el que hablas se llama ${waName}. 
-                        Responde de manera concisa (máximo 2 párrafos cortos), cálida y usando algún emoji relacionado con mascotas al siguiente mensaje del cliente: "${msg_body}"`;
-                        
-                        const result = await model.generateContent(prompt);
-                        respuestaFinal = result.response.text();
-                        console.log("🧠 IA Gemini respondió:", respuestaFinal);
-                    } catch (iaError) {
-                        console.error("❌ Error con Gemini:", iaError);
-                        respuestaFinal = `¡Hola ${waName}! En este momento mi sistema está procesando mucha información, ¿puedes escribirme en un minuto? 🐾`;
-                    }
-                    // --- FIN BLOQUE IA ---
+                    // 2. Cerebro: Consultar IA con respaldo de modelos múltiples
+                    const respuestaFinal = await generarRespuestaConIA(waName, msg_body);
+                    console.log("🧠 Respuesta IA generada con éxito");
 
-                    // --- INICIO BLOQUE RESPUESTA (WhatsApp v25.0) ---
+                    // 3. Respuesta: Enviar de vuelta a WhatsApp vía Graph API v25.0
                     const response = await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                         method: 'POST',
                         headers: {
@@ -97,15 +113,12 @@ router.post('/webhook', async (req, res) => {
                         const errorData = await response.json();
                         console.error("❌ Error enviando mensaje a WhatsApp:", JSON.stringify(errorData, null, 2));
                     }
-                    // --- FIN BLOQUE RESPUESTA ---
-
                 }
             }
         } catch (error) {
             console.error("❌ Error procesando el webhook:", error);
         }
         
-        // Siempre responder 200 a Meta
         res.sendStatus(200);
     } else {
         res.sendStatus(404);
