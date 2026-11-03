@@ -3,12 +3,11 @@ const router = express.Router();
 const Contact = require('../models/Contact');
 const Lead = require('../models/Lead');
 
-// --- CEREBRO DE IA (AHORA CON MEMORIA DE CONVERSACIÓN) ---
+// --- CEREBRO DE IA (CON MEMORIA Y CHISMOSOS ACTIVADOS) ---
 async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
-    // Usamos tus modelos estables
-    const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    const modelos = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
     
-    // Formateamos el historial para que la IA lo lea como un guión de teatro
+    // Formateamos el historial para que la IA lo lea como un guión
     let historialTexto = historialPrevio.map(msg => `${msg.role === 'user' ? 'Cliente' : 'Asistente'}: ${msg.content}`).join('\n');
 
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial para veterinarias, spas y pet shops. 
@@ -41,12 +40,18 @@ async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
             clearTimeout(timeoutId);
             const data = await response.json(); 
             
-            if (data.error) continue; 
+            if (data.error) {
+                // 📢 CHISMOSO 1: Si Google rechaza el modelo, nos avisa aquí
+                console.log(`⚠️ Google rechazó el modelo ${modelo}:`, data.error.message);
+                continue; 
+            }
             
             if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                 return data.candidates[0].content.parts[0].text.trim();
             }
         } catch (error) { 
+            // 📢 CHISMOSO 2: Si hay timeout o error de red
+            console.log(`⏳ Error de red o Timeout con el modelo ${modelo}`);
             continue; 
         }
     } 
@@ -113,22 +118,28 @@ router.post('/webhook', async (req, res) => {
                         console.error("No se pudo enviar la reacción", e);
                     }
 
-                    // 1. MEMORIA: Buscar o crear el contacto y recuperar su historial
+                    // 1. MEMORIA: Buscar o crear el contacto
                     let contacto;
                     try {
                         contacto = await Contact.findOne({ phoneNumber: from });
                         if (!contacto) {
                             contacto = new Contact({ phoneNumber: from, name: waName });
                         }
+                        
+                        // Vacuna: Si es un contacto viejo que no tenía historial, se lo creamos vacío
+                        if (!contacto.history) {
+                            contacto.history = [];
+                        }
+
                         contacto.name = waName;
                         contacto.lastInteraction = new Date();
                     } catch (dbError) {
                         console.error("❌ Error DB Contactos:", dbError);
                     }
 
-                    const historialPrevio = contacto.history || [];
+                    const historialPrevio = contacto.history;
 
-                    // 2. CEREBRO: Consultar IA enviándole el historial
+                    // 2. CEREBRO: Consultar IA
                     let respuestaFinal = await generarRespuestaConIA(waName, msg_body, historialPrevio);
 
                     // 3. CAPTURADOR DE LEADS
@@ -148,17 +159,16 @@ router.post('/webhook', async (req, res) => {
                         }
                     }
 
-                    // 4. GUARDAR NUEVOS MENSAJES EN LA MEMORIA
+                    // 4. GUARDAR NUEVOS MENSAJES
                     contacto.history.push({ role: 'user', content: msg_body });
                     contacto.history.push({ role: 'model', content: respuestaFinal });
                     
-                    // Si la charla es muy larga, borramos lo más viejo para no saturar
                     if (contacto.history.length > 8) {
                         contacto.history = contacto.history.slice(-8);
                     }
                     await contacto.save();
 
-                    // 5. Enviar respuesta a WhatsApp
+                    // 5. Enviar respuesta
                     await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                         method: 'POST',
                         headers: {
