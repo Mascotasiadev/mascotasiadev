@@ -1,23 +1,30 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors'); // 👈 NUEVO: Necesario para que el panel web se conecte
+const cors = require('cors'); 
+const path = require('path'); // 👈 NUEVO: Herramienta para leer la carpeta 'public'
 
 // Importamos las rutas
 const whatsappRoutes = require('./src/routes/whatsappRoutes'); 
-const dashboardRoutes = require('./src/routes/dashboardRoutes'); // 👈 NUEVO: Importamos las rutas del panel
+const dashboardRoutes = require('./src/routes/dashboardRoutes'); 
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
 // Middleware para seguridad y formato
-app.use(cors()); // 👈 NUEVO: Habilita la conexión externa
+app.use(cors()); 
 app.use(express.json());
+
+// ====================================================
+// 🌐 ALOJAMIENTO DEL PANEL WEB (FRONTEND)
+// ====================================================
+// Esto expone la carpeta 'public' a internet. 
+// Tu panel vivirá en: tusitio.com/dashboard.html
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ====================================================
 // 🕵️‍♂️ DETECTOR GLOBAL DE TRÁFICO (CAZADOR DE META)
 // ====================================================
-// Esto imprimirá en Render CUALQUIER toque a la puerta, sin importar la ruta
 app.use((req, res, next) => {
     console.log(`📡 [TRÁFICO DETECTADO] Método: ${req.method} | Ruta: ${req.url}`);
     if (req.method === 'POST') {
@@ -56,7 +63,7 @@ app.post('/', (req, res) => {
 // RUTAS DE LA API (WEBHOOK Y PANEL)
 // ====================================================
 app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/dashboard', dashboardRoutes); // 👈 NUEVO: Activamos el túnel para tu panel web
+app.use('/api/dashboard', dashboardRoutes); 
 
 // ====================================================
 // MODELO MULTI-TENANT Y SEMILLA AUTOMÁTICA EN MONGODB
