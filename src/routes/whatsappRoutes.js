@@ -6,9 +6,9 @@ const Contact = require('../models/Contact');
 async function generarRespuestaConIA(waName, msgBody) {
     const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-1.5-flash'];
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial para veterinarias, spas y pet shops. 
-    El usuario que te escribe se llama ${waName}. 
-    Responde al mensaje del cliente de forma comercial, corta y persuasiva (máximo 2 párrafos), explicándole cómo el sistema automatiza su negocio 24/7 y aumenta sus ventas. 
-    Mensaje del cliente: "${msgBody}"`;
+                    El usuario que te escribe se llama ${waName}. 
+                    REGLA DE ORO: Responde de forma sumamente corta, directa y persuasiva (máximo 1 párrafo breve y una pregunta al final), adaptándote al negocio del que habla (veterinaria, spa, pet shop o si combina varios). 
+                    Mensaje del cliente: "${msgBody}"`;
 
     for (const modelo of modelos) {
         try {
