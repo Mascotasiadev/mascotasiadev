@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 
 const leadSchema = new mongoose.Schema({
+    tenantId: { type: String, required: true }, // 👈 A qué veterinaria le pertenece este lead
     phoneNumber: { type: String, required: true },
     name: { type: String, default: 'Cliente' },
-    businessType: { type: String, default: 'No especificado' }, // Ejemplo: Veterinaria, Spa, Petshop
-    summary: { type: String, default: 'Solicita información' },  // Lo que la IA detecte que quiere
-    status: { type: String, default: 'Pendiente' },             // Para saber si ya lo llamaron o no
+    businessType: { type: String, default: 'No especificado' },
+    summary: { type: String, default: 'Solicita información' },
+    status: { type: String, default: 'Pendiente' },
     createdAt: { type: Date, default: Date.now }
 });
 
