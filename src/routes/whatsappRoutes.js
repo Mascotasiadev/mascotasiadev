@@ -3,11 +3,10 @@ const router = express.Router();
 const Contact = require('../models/Contact');
 const Lead = require('../models/Lead');
 
-// --- CEREBRO DE IA (CON MEMORIA Y CHISMOSOS ACTIVADOS) ---
+// --- CEREBRO DE IA (CON MEMORIA Y CHISMOSOS) ---
 async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
     const modelos = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
     
-    // Formateamos el historial para que la IA lo lea como un guión
     let historialTexto = historialPrevio.map(msg => `${msg.role === 'user' ? 'Cliente' : 'Asistente'}: ${msg.content}`).join('\n');
 
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial para veterinarias, spas y pet shops. 
@@ -41,7 +40,6 @@ async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
             const data = await response.json(); 
             
             if (data.error) {
-                // 📢 CHISMOSO 1: Si Google rechaza el modelo, nos avisa aquí
                 console.log(`⚠️ Google rechazó el modelo ${modelo}:`, data.error.message);
                 continue; 
             }
@@ -50,7 +48,6 @@ async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
                 return data.candidates[0].content.parts[0].text.trim();
             }
         } catch (error) { 
-            // 📢 CHISMOSO 2: Si hay timeout o error de red
             console.log(`⏳ Error de red o Timeout con el modelo ${modelo}`);
             continue; 
         }
@@ -88,7 +85,7 @@ router.post('/webhook', async (req, res) => {
                 body.entry[0].changes[0].value.messages[0]) {
                 
                 const value = body.entry[0].changes[0].value;
-                const phone_number_id = value.metadata.phone_number_id;
+                const phone_number_id = value.metadata.phone_number_id; // 👈 ESTE ES EL TENANT ID (Identificador de la Veterinaria)
                 const message = value.messages[0];
                 const from = message.from; 
                 const message_id = message.id;
@@ -97,9 +94,8 @@ router.post('/webhook', async (req, res) => {
 
                 if (message.type === 'text') {
                     const msg_body = message.text.body;
-                    console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
+                    console.log(`📨 Mensaje de cliente (${from}) para el negocio (${phone_number_id}): ${msg_body}`);
 
-                    // Feedback visual (⏳)
                     try {
                         await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                             method: 'POST',
@@ -118,15 +114,14 @@ router.post('/webhook', async (req, res) => {
                         console.error("No se pudo enviar la reacción", e);
                     }
 
-                    // 1. MEMORIA: Buscar o crear el contacto
+                    // 1. MEMORIA MULTI-TENANT: Buscamos por teléfono del cliente + ID de la veterinaria
                     let contacto;
                     try {
-                        contacto = await Contact.findOne({ phoneNumber: from });
+                        contacto = await Contact.findOne({ tenantId: phone_number_id, phoneNumber: from });
                         if (!contacto) {
-                            contacto = new Contact({ phoneNumber: from, name: waName });
+                            contacto = new Contact({ tenantId: phone_number_id, phoneNumber: from, name: waName });
                         }
                         
-                        // Vacuna: Si es un contacto viejo que no tenía historial, se lo creamos vacío
                         if (!contacto.history) {
                             contacto.history = [];
                         }
@@ -142,18 +137,19 @@ router.post('/webhook', async (req, res) => {
                     // 2. CEREBRO: Consultar IA
                     let respuestaFinal = await generarRespuestaConIA(waName, msg_body, historialPrevio);
 
-                    // 3. CAPTURADOR DE LEADS
+                    // 3. CAPTURADOR DE LEADS MULTI-TENANT
                     if (respuestaFinal.includes('[NUEVO_LEAD]')) {
                         respuestaFinal = respuestaFinal.replace('[NUEVO_LEAD]', '').trim();
                         
                         try {
                             const nuevoLead = new Lead({
+                                tenantId: phone_number_id, // 👈 Le asignamos este lead a la veterinaria correcta
                                 phoneNumber: from,
                                 name: waName,
                                 summary: `Interés generado tras conversar. Último mensaje: "${msg_body}"`
                             });
                             await nuevoLead.save();
-                            console.log(`🎉 ¡BINGO! NUEVO LEAD CAPTURADO: ${waName}`);
+                            console.log(`🎉 ¡BINGO! NUEVO LEAD CAPTURADO para el negocio ${phone_number_id}`);
                         } catch (leadError) {
                             console.error("❌ Error DB Leads:", leadError);
                         }
