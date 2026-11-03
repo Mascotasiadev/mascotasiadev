@@ -19,7 +19,8 @@ async function generarRespuestaConIA(waName, msgBody) {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${process.env.GEMINI_API_KEY}`;
             
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 segundos para evitar falsos positivos
+            // ⏱️ Subimos a 15 segundos para darle respiro a la API y a Render
+            const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
             const response = await fetch(url, { 
                 method: 'POST', 
@@ -31,17 +32,21 @@ async function generarRespuestaConIA(waName, msgBody) {
             clearTimeout(timeoutId);
             const data = await response.json(); 
             
-            if (data.error) continue; 
+            if (data.error) {
+                console.log(`⚠️ Modelo ${modelo} falló por error de Google:`, data.error.message);
+                continue; 
+            }
             
             if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                 return data.candidates[0].content.parts[0].text.trim();
             }
         } catch (error) { 
+            console.log(`⏳ Modelo ${modelo} superó el tiempo límite (Timeout) o falló la red.`);
             continue; 
         }
     } 
-    // Mensaje de emergencia SIN etiqueta para no generar bucles
-    return `¡Hola ${waName}! Mi sistema está procesando mucha información en este instante. ¿Me puedes confirmar si deseas agendar una demostración de nuestro servicio?`;
+    // 🛑 MENSAJE DE EMERGENCIA (Sin preguntas para romper el bucle)
+    return `¡Hola ${waName}! Hemos registrado tu solicitud exitosamente. En este momento nuestro asistente virtual está procesando muchas consultas, pero un asesor humano se pondrá en contacto contigo muy pronto. ¡Gracias por tu interés!`;
 }
 
 // --- 1. VERIFICACIÓN DEL WEBHOOK (Meta) ---
@@ -77,7 +82,7 @@ router.post('/webhook', async (req, res) => {
                 const phone_number_id = value.metadata.phone_number_id;
                 const message = value.messages[0];
                 const from = message.from; 
-                const message_id = message.id; // 👈 Capturamos el ID exacto de su mensaje
+                const message_id = message.id;
                 
                 const waName = value.contacts && value.contacts[0] ? value.contacts[0].profile.name : 'Cliente';
 
@@ -85,8 +90,7 @@ router.post('/webhook', async (req, res) => {
                     const msg_body = message.text.body;
                     console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
 
-                    // --- PASO EXTRA: FEEDBACK VISUAL INMEDIATO ---
-                    // Reaccionamos al mensaje del usuario con un ⏳ al instante
+                    // --- FEEDBACK VISUAL INMEDIATO (⏳) ---
                     try {
                         await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                             method: 'POST',
@@ -104,7 +108,6 @@ router.post('/webhook', async (req, res) => {
                                 }
                             })
                         });
-                        console.log("⏱️ Señal visual enviada al instante.");
                     } catch (e) {
                         console.error("No se pudo enviar la reacción", e);
                     }
