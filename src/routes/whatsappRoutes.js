@@ -3,23 +3,32 @@ const router = express.Router();
 const Contact = require('../models/Contact');
 const Lead = require('../models/Lead');
 
-// --- CEREBRO DE INTELIGENCIA ARTIFICIAL CON CAPTURADOR DE LEADS ---
-async function generarRespuestaConIA(waName, msgBody) {
+// --- CEREBRO DE IA (AHORA CON MEMORIA DE CONVERSACIÓN) ---
+async function generarRespuestaConIA(waName, msgBody, historialPrevio) {
+    // Usamos tus modelos estables
     const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    
+    // Formateamos el historial para que la IA lo lea como un guión de teatro
+    let historialTexto = historialPrevio.map(msg => `${msg.role === 'user' ? 'Cliente' : 'Asistente'}: ${msg.content}`).join('\n');
+
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial para veterinarias, spas y pet shops. 
-    El usuario que te escribe se llama ${waName}. 
+    El usuario se llama ${waName}. 
     
-    REGLA 1: Responde de forma muy corta, directa y persuasiva (máximo 1 párrafo breve).
-    REGLA 2 (ESTRICTA): Si el usuario muestra interés en comprar, solicita una demostración (demo), o dice "Sí" a agendar una cita, agradece su interés, dile que un asesor lo contactará en breve y DEBES agregar obligatoriamente la etiqueta exacta [NUEVO_LEAD] al final de tu respuesta. NO le hagas más preguntas si ya aceptó la demo.
-    
-    Mensaje del cliente: "${msgBody}"`;
+    REGLA 1: Responde de forma muy corta, directa y persuasiva (máximo 1 párrafo).
+    REGLA 2: Si el usuario muestra interés en comprar, solicita una demostración (demo), o dice "Sí" a agendar una cita, agradece su interés, dile que un asesor lo contactará en breve y DEBES agregar obligatoriamente la etiqueta exacta [NUEVO_LEAD] al final de tu respuesta. NO hagas más preguntas si ya aceptó la demo.
+
+    --- CONTEXTO DE LA CHARLA HASTA AHORA ---
+    ${historialTexto}
+
+    --- MENSAJE NUEVO DEL CLIENTE ---
+    Cliente: "${msgBody}"
+    Asistente:`;
 
     for (const modelo of modelos) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${process.env.GEMINI_API_KEY}`;
             
             const controller = new AbortController();
-            // ⏱️ Subimos a 15 segundos para darle respiro a la API y a Render
             const timeoutId = setTimeout(() => controller.abort(), 15000); 
 
             const response = await fetch(url, { 
@@ -32,21 +41,16 @@ async function generarRespuestaConIA(waName, msgBody) {
             clearTimeout(timeoutId);
             const data = await response.json(); 
             
-            if (data.error) {
-                console.log(`⚠️ Modelo ${modelo} falló por error de Google:`, data.error.message);
-                continue; 
-            }
+            if (data.error) continue; 
             
             if (data.candidates && data.candidates[0]?.content?.parts[0]?.text) {
                 return data.candidates[0].content.parts[0].text.trim();
             }
         } catch (error) { 
-            console.log(`⏳ Modelo ${modelo} superó el tiempo límite (Timeout) o falló la red.`);
             continue; 
         }
     } 
-    // 🛑 MENSAJE DE EMERGENCIA (Sin preguntas para romper el bucle)
-    return `¡Hola ${waName}! Hemos registrado tu solicitud exitosamente. En este momento nuestro asistente virtual está procesando muchas consultas, pero un asesor humano se pondrá en contacto contigo muy pronto. ¡Gracias por tu interés!`;
+    return `¡Hola ${waName}! Hemos registrado tu solicitud exitosamente. Nuestro asistente virtual está procesando muchas consultas, pero un asesor humano te contactará pronto. ¡Gracias por tu interés!`;
 }
 
 // --- 1. VERIFICACIÓN DEL WEBHOOK (Meta) ---
@@ -90,7 +94,7 @@ router.post('/webhook', async (req, res) => {
                     const msg_body = message.text.body;
                     console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
 
-                    // --- FEEDBACK VISUAL INMEDIATO (⏳) ---
+                    // Feedback visual (⏳)
                     try {
                         await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                             method: 'POST',
@@ -102,29 +106,30 @@ router.post('/webhook', async (req, res) => {
                                 messaging_product: 'whatsapp',
                                 to: from,
                                 type: 'reaction',
-                                reaction: {
-                                    message_id: message_id,
-                                    emoji: '⏳' 
-                                }
+                                reaction: { message_id: message_id, emoji: '⏳' }
                             })
                         });
                     } catch (e) {
                         console.error("No se pudo enviar la reacción", e);
                     }
 
-                    // 1. Guardar contacto
+                    // 1. MEMORIA: Buscar o crear el contacto y recuperar su historial
+                    let contacto;
                     try {
-                        await Contact.findOneAndUpdate(
-                            { phoneNumber: from }, 
-                            { name: waName, lastInteraction: new Date() }, 
-                            { upsert: true, new: true } 
-                        );
+                        contacto = await Contact.findOne({ phoneNumber: from });
+                        if (!contacto) {
+                            contacto = new Contact({ phoneNumber: from, name: waName });
+                        }
+                        contacto.name = waName;
+                        contacto.lastInteraction = new Date();
                     } catch (dbError) {
                         console.error("❌ Error DB Contactos:", dbError);
                     }
 
-                    // 2. Consultar IA
-                    let respuestaFinal = await generarRespuestaConIA(waName, msg_body);
+                    const historialPrevio = contacto.history || [];
+
+                    // 2. CEREBRO: Consultar IA enviándole el historial
+                    let respuestaFinal = await generarRespuestaConIA(waName, msg_body, historialPrevio);
 
                     // 3. CAPTURADOR DE LEADS
                     if (respuestaFinal.includes('[NUEVO_LEAD]')) {
@@ -134,7 +139,7 @@ router.post('/webhook', async (req, res) => {
                             const nuevoLead = new Lead({
                                 phoneNumber: from,
                                 name: waName,
-                                summary: `Interés: "${msg_body}"`
+                                summary: `Interés generado tras conversar. Último mensaje: "${msg_body}"`
                             });
                             await nuevoLead.save();
                             console.log(`🎉 ¡BINGO! NUEVO LEAD CAPTURADO: ${waName}`);
@@ -143,7 +148,17 @@ router.post('/webhook', async (req, res) => {
                         }
                     }
 
-                    // 4. Enviar respuesta final
+                    // 4. GUARDAR NUEVOS MENSAJES EN LA MEMORIA
+                    contacto.history.push({ role: 'user', content: msg_body });
+                    contacto.history.push({ role: 'model', content: respuestaFinal });
+                    
+                    // Si la charla es muy larga, borramos lo más viejo para no saturar
+                    if (contacto.history.length > 8) {
+                        contacto.history = contacto.history.slice(-8);
+                    }
+                    await contacto.save();
+
+                    // 5. Enviar respuesta a WhatsApp
                     await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                         method: 'POST',
                         headers: {
