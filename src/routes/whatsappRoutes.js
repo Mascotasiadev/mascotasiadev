@@ -2,25 +2,24 @@ const express = require('express');
 const router = express.Router();
 const Contact = require('../models/Contact');
 
-// --- CEREBRO DE INTELIGENCIA ARTIFICIAL (Comercial / B2B Adaptativo) ---
+// --- CEREBRO DE INTELIGENCIA ARTIFICIAL (Con memoria de chat) ---
 async function generarRespuestaConIA(waName, msgBody) {
     const modelos = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-1.5-flash'];
     
     const prompt = `Eres el director comercial experto de "MascotasIADev", un software SaaS de inteligencia artificial diseñado para automatizar la atención y aumentar las ventas de veterinarias, spas, pet shops y hoteles de mascotas.
     El usuario que te escribe se llama ${waName}. 
     
-    Tu objetivo al responderle a este dueño de negocio es:
-    1. Explicarle con entusiasmo y de forma muy persuasiva (máximo 2 párrafos cortos) qué valor le aporta el sistema: actúa como un recepcionista virtual inteligente que trabaja 24/7, responde dudas, agenda citas automáticamente y asegura que ningún cliente se quede sin atender, ahorrándole costos y dándole control de su tiempo.
-    2. Mantén los ejemplos generales para cualquier negocio de mascotas.
-    3. Termina siempre con una pregunta estratégica orientada a conocer su negocio, por ejemplo: "¿Qué tipo de negocio de mascotas tienes (veterinaria, spa, pet shop) y cuántas personas atienden al día?".
+    Tu objetivo:
+    1. Explicarle con entusiasmo cómo el sistema le ayuda a automatizar su negocio 24/7 y llenar su agenda.
+    2. Analiza lo que el usuario va respondiendo para guiarlo hacia una cotización o demostración.
+    3. Si ya te dijo qué tipo de negocio tiene (spa, veterinaria, etc.), ¡no se lo vuelvas a preguntar! Adapta tu respuesta a su negocio específico y proponle el siguiente paso (por ejemplo, agendar una prueba de la plataforma).
 
-    Mensaje del cliente: "${msgBody}"`;
+    Mensaje actual del cliente: "${msgBody}"`;
 
     for (const modelo of modelos) {
         try {
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent?key=${process.env.GEMINI_API_KEY}`;
             
-            // Usamos un AbortController para que si Google tarda más de 8 segundos, salte al siguiente modelo
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
 
@@ -45,7 +44,7 @@ async function generarRespuestaConIA(waName, msgBody) {
         }
     }
     
-    return `¡Hola ${waName}! MascotasIADev automatiza tu negocio de mascotas con IA para que vendas más y ahorres tiempo 24/7 🐾. ¿Qué tipo de negocio tienes (veterinaria, spa o pet shop)?`;
+    return `¡Hola ${waName}! MascotasIADev automatiza tu negocio de mascotas con IA 🐾. Cuéntame más sobre tu emprendimiento para ayudarte.`;
 }
 
 // --- 1. VERIFICACIÓN DEL WEBHOOK (Meta) ---
@@ -69,8 +68,7 @@ router.get('/webhook', (req, res) => {
 
 // --- 2. RECEPCIÓN Y PROCESAMIENTO DE MENSAJES ---
 router.post('/webhook', async (req, res) => {
-    // RESPONDER A META INMEDIATAMENTE PARA EVITAR TIME-OUTS
-    res.sendStatus(200);
+    res.sendStatus(200); // Responder 200 inmediatamente a Meta
 
     const body = req.body;
 
@@ -93,23 +91,21 @@ router.post('/webhook', async (req, res) => {
                     const msg_body = message.text.body;
                     console.log(`📨 Mensaje de cliente (${from}): ${msg_body}`);
 
-                    // 1. Memoria: Guardar o actualizar en MongoDB Atlas
+                    // 1. Memoria DB: Guardar contacto
                     try {
                         await Contact.findOneAndUpdate(
                             { phoneNumber: from }, 
                             { name: waName, lastInteraction: new Date() }, 
                             { upsert: true, new: true } 
                         );
-                        console.log(`💾 Contacto ${waName} (${from}) guardado en MongoDB.`);
                     } catch (dbError) {
                         console.error("❌ Error guardando en MongoDB:", dbError);
                     }
 
-                    // 2. Cerebro: Consultar IA
+                    // 2. Cerebro IA
                     const respuestaFinal = await generarRespuestaConIA(waName, msg_body);
-                    console.log("🧠 Respuesta IA comercial generada con éxito");
 
-                    // 3. Respuesta: Enviar de vuelta a WhatsApp vía Graph API v25.0
+                    // 3. Enviar respuesta a WhatsApp
                     const response = await fetch(`https://graph.facebook.com/v25.0/${phone_number_id}/messages`, {
                         method: 'POST',
                         headers: {
@@ -123,9 +119,7 @@ router.post('/webhook', async (req, res) => {
                         })
                     });
 
-                    if (response.ok) {
-                        console.log("✅ Respuesta enviada a WhatsApp con éxito");
-                    } else {
+                    if (!response.ok) {
                         const errorData = await response.json();
                         console.error("❌ Error enviando mensaje a WhatsApp:", JSON.stringify(errorData, null, 2));
                     }
