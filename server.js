@@ -2,11 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors'); 
-const path = require('path'); // 👈 NUEVO: Herramienta para leer la carpeta 'public'
+const path = require('path'); 
 
 // Importamos las rutas
 const whatsappRoutes = require('./src/routes/whatsappRoutes'); 
 const dashboardRoutes = require('./src/routes/dashboardRoutes'); 
+const tenantRoutes = require('./src/routes/tenantRoutes'); // 👈 NUEVO: Importamos las rutas del Super Admin
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -18,8 +19,6 @@ app.use(express.json());
 // ====================================================
 // 🌐 ALOJAMIENTO DEL PANEL WEB (FRONTEND)
 // ====================================================
-// Esto expone la carpeta 'public' a internet. 
-// Tu panel vivirá en: tusitio.com/dashboard.html
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ====================================================
@@ -60,23 +59,16 @@ app.post('/', (req, res) => {
 });
 
 // ====================================================
-// RUTAS DE LA API (WEBHOOK Y PANEL)
+// RUTAS DE LA API (WEBHOOK, DASHBOARD Y TENANTS)
 // ====================================================
 app.use('/api/whatsapp', whatsappRoutes);
 app.use('/api/dashboard', dashboardRoutes); 
+app.use('/api/tenants', tenantRoutes); // 👈 NUEVO: Activamos el túnel para el Super Admin
 
 // ====================================================
 // MODELO MULTI-TENANT Y SEMILLA AUTOMÁTICA EN MONGODB
 // ====================================================
-const tenantSchema = new mongoose.Schema({
-    nombreNegocio: String,
-    tipo: String,
-    telefonoWhatsAppId: String,
-    activo: { type: Boolean, default: true },
-    fechaCreacion: { type: Date, default: Date.now }
-});
-
-const Tenant = mongoose.models.Tenant || mongoose.model('Tenant', tenantSchema);
+const Tenant = require('./src/models/Tenant'); // 👈 Importamos el modelo oficial unificado
 
 mongoose.connect(process.env.MONGO_URI)
     .then(async () => {
@@ -84,12 +76,16 @@ mongoose.connect(process.env.MONGO_URI)
         
         // Forzamos la creación de la base de datos en Atlas creando el primer cliente (Tenant)
         try {
-            const existe = await Tenant.findOne({ nombreNegocio: 'Pet Spa Demo' });
+            const existe = await Tenant.findOne({ nombreNegocio: 'Clínica & Spa Huellitas' });
             if (!existe) {
                 await Tenant.create({
-                    nombreNegocio: 'Pet Spa Demo',
-                    tipo: 'Pet Spa y Veterinaria',
-                    telefonoWhatsAppId: process.env.WHATSAPP_PHONE_ID || 'pendiente'
+                    tenantId: process.env.WHATSAPP_PHONE_ID || '1433813413148961',
+                    nombreNegocio: 'Clínica & Spa Huellitas',
+                    pais: 'EC',
+                    ciudad: 'Quito, Ecuador',
+                    modulos: { vet: true, spa: true, shop: true },
+                    erp: 'Contífico API (EC)',
+                    activo: true
                 });
                 console.log('🎉 ¡Primer Tenant creado! La base de datos ya es visible en MongoDB Atlas.');
             } else {

@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MascotasIADev - Suite Binacional para Negocios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-slate-50 flex flex-col h-screen font-sans overflow-hidden">
+
+    <!-- ================================================================= -->
+    <!-- 🛠️ BARRA DE SIMULACIÓN (MÓDULOS + MOTOR FISCAL EC/CO)            -->
+    <!-- ================================================================= -->
+    <div class="bg-slate-900 text-white px-6 py-3 flex justify-between items-center border-b border-slate-700 shadow-lg z-20">
+        <div class="flex items-center space-x-3">
+            <span class="bg-amber-500 text-slate-900 text-xs font-extrabold px-2.5 py-1 rounded uppercase tracking-wider">Simulador Arquitecto</span>
+            
+            <!-- Selector de País / Motor Fiscal -->
+            <div class="flex items-center space-x-2 bg-slate-800 border border-slate-600 px-3 py-1 rounded-lg">
+                <i class="fa-solid fa-earth-americas text-blue-400 text-xs"></i>
+                <span class="text-xs text-slate-300 font-semibold">País del Cliente:</span>
+                <select id="selectPais" onchange="cambiarConfiguracionFiscal()" class="bg-slate-900 text-amber-400 font-bold text-xs rounded px-2 py-0.5 outline-none border border-slate-700 cursor-pointer">
+                    <option value="EC">🇪🇨 Ecuador (USD $ - IVA 15%)</option>
+                    <option value="CO">🇨🇴 Colombia (COP $ - IVA 19%)</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Interruptores de Módulos -->
+        <div class="flex space-x-6 text-sm font-medium">
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-emerald-400 transition">
+                <input type="checkbox" id="toggleVet" checked onchange="actualizarModulos()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
+                <span>🏥 Módulo Veterinaria</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-purple-400 transition">
+                <input type="checkbox" id="toggleSpa" checked onchange="actualizarModulos()" class="w-4 h-4 accent-purple-500 rounded cursor-pointer">
+                <span>✂️ Módulo Pet Spa</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-amber-400 transition">
+                <input type="checkbox" id="toggleShop" checked onchange="actualizarModulos()" class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
+                <span>🛍️ Módulo Pet Shop</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="flex flex-1 overflow-hidden">
+
+        <!-- ================================================================= -->
+        <!-- 🧭 MENÚ LATERAL INTELIGENTE (SIDEBAR CAMALEÓN)                    -->
+        <!-- ================================================================= -->
+        <aside class="w-72 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 overflow-y-auto">
+            <div>
+                <!-- Logo, Nombre del Negocio y Etiqueta Fiscal Activa -->
+                <div class="p-6 border-b border-slate-100">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
+                            🐾
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-slate-800 leading-tight">Clínica & Spa Huellitas</h2>
+                            <span class="text-xs text-emerald-600 font-semibold flex items-center mt-0.5">
+                                <span class="w-2 h-2 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span> IA Conectada a WhatsApp
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Insignia Fiscal Dinámica -->
+                    <div id="badge-fiscal" class="mt-3 bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs flex justify-between items-center font-semibold text-slate-700">
+                        <span>🇪🇨 SRI Ecuador</span>
+                        <span class="text-blue-600 font-bold">USD ($) · IVA 15%</span>
+                    </div>
+                </div>
+
+                <!-- Navegación -->
+                <nav class="p-4 space-y-1 text-sm">
+                    
+                    <!-- SECCIÓN 1: CORE (SIEMPRE VISIBLE) -->
+                    <p class="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 mt-1">General & Ventas</p>
+                    <button onclick="mostrarVista('vista-crm', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-blue-50 text-blue-700 font-semibold transition">
+                        <i class="fa-solid fa-users-viewfinder w-5 text-center"></i>
+                        <span>CRM Prospectos (IA)</span>
+                    </button>
+                    <button onclick="mostrarVista('vista-campanas', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-bullhorn w-5 text-center"></i>
+                        <span>Campañas WhatsApp</span>
+                    </button>
+
+                    <!-- SECCIÓN 2: MÓDULO VETERINARIA -->
+                    <div id="menu-vet" class="pt-4">
+                        <p class="px-3 text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center justify-between">
+                            <span>🏥 Clínica Veterinaria</span>
+                        </p>
+                        <button onclick="mostrarVista('vista-vet-agenda', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition">
+                            <i class="fa-solid fa-stethoscope w-5 text-center text-emerald-600"></i>
+                            <span>Consultas y Triaje IA</span>
+                        </button>
+                        <button onclick="mostrarVista('vista-vet-vacunas', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition">
+                            <i class="fa-solid fa-syringe w-5 text-center text-emerald-600"></i>
+                            <span>Alertas de Vacunación</span>
+                        </button>
+                    </div>
+
+                    <!-- SECCIÓN 3: MÓDULO PET SPA -->
+                    <div id="menu-spa" class="pt-4">
+                        <p class="px-3 text-xs font-bold text-purple-600 uppercase tracking-wider mb-2">✂️ Peluquería & Spa</p>
+                        <button onclick="mostrarVista('vista-spa-monitor', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-purple-50 hover:text-purple-700 transition">
+                            <i class="fa-solid fa-bath w-5 text-center text-purple-600"></i>
+                            <span>Monitor de Peluquería</span>
+                        </button>
+                        <button onclick="mostrarVista('vista-spa-tarifas', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-purple-50 hover:text-purple-700 transition">
+                            <i class="fa-solid fa-tags w-5 text-center text-purple-600"></i>
+                            <span>Tarifario por Razas</span>
+                        </button>
+                    </div>
+
+                    <!-- SECCIÓN 4: MÓDULO PET SHOP -->
+                    <div id="menu-shop" class="pt-4">
+                        <p class="px-3 text-xs font-bold text-amber-600 uppercase tracking-wider mb-2">🛍️ Pet Shop & Tienda</p>
+                        <button onclick="mostrarVista('vista-shop-pedidos', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition">
+                            <i class="fa-solid fa-motorcycle w-5 text-center text-amber-600"></i>
+                            <span>Pedidos a Domicilio</span>
+                        </button>
+                        <button onclick="mostrarVista('vista-shop-inventario', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-amber-50 hover:text-amber-700 transition">
+                            <i class="fa-solid fa-boxes-stacked w-5 text-center text-amber-600"></i>
+                            <span>Catálogo y Stock (IA)</span>
+                        </button>
+                    </div>
+
+                    <!-- SECCIÓN 5: CONEXIÓN ERP Y CONFIGURACIÓN -->
+                    <div class="pt-4 border-t border-slate-100 mt-4">
+                        <p class="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Puente Tecnológico</p>
+                        <button onclick="mostrarVista('vista-erp', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-plug-circle-bolt w-5 text-center text-blue-600"></i>
+                            <span>Sincronizar con mi ERP</span>
+                        </button>
+                        <button onclick="mostrarVista('vista-ia', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                            <i class="fa-solid fa-robot w-5 text-center text-slate-500"></i>
+                            <span>Entrenar a mi IA</span>
+                        </button>
+                    </div>
+                </nav>
+            </div>
+
+            <!-- Pie de barra lateral -->
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500 flex justify-between items-center">
+                <span>ID: 1433813413148961</span>
+                <span class="font-bold text-blue-600">MascotasIADev</span>
+            </div>
+        </aside>
+
+        <!-- ================================================================= -->
+        <!-- 🖥️ ÁREA DE CONTENIDO DINÁMICO (LAS PANTALLAS)                     -->
+        <!-- ================================================================= -->
+        <main class="flex-1 overflow-y-auto p-8 bg-slate-50">
+
+            <!-- 1. VISTA CRM (CORE) -->
+            <section id="vista-crm">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">CRM de Prospectos Capturados</h1>
+                        <p class="text-sm text-slate-500">Clientes atendidos por tu IA en WhatsApp que solicitaron atención o servicios.</p>
+                    </div>
+                    <button onclick="cargarLeadsReales()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>Sincronizar con Servidor Render</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
+                                <th class="p-4">Cliente / WhatsApp</th>
+                                <th class="p-4">Resumen de la IA</th>
+                                <th class="p-4">Estado del Embudo</th>
+                                <th class="p-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-crm-body" class="divide-y divide-slate-100 text-sm">
+                            <tr>
+                                <td class="p-4">
+                                    <p class="font-bold text-slate-800">Laura Gómez</p>
+                                    <p class="text-xs text-slate-400">+593 99 888 7766</p>
+                                </td>
+                                <td class="p-4 text-slate-600">Preguntó por baño medicado para Golden Retriever y alimento hipoalergénico.</td>
+                                <td class="p-4">
+                                    <select class="bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-2.5 py-1 text-xs font-semibold outline-none">
+                                        <option>🔥 Nuevo Lead</option>
+                                        <option>💬 En seguimiento</option>
+                                        <option>✅ Cita / Venta Cerrada</option>
+                                    </select>
+                                </td>
+                                <td class="p-4">
+                                    <button class="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-semibold transition">
+                                        <i class="fa-brands fa-whatsapp mr-1"></i> Abrir Chat
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 2. VISTA MONITOR PET SPA (EL BOTÓN MÁGICO) -->
+            <section id="vista-spa-monitor" class="hidden">
+                <div class="mb-6">
+                    <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">Módulo Pet Spa</span>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-2">Monitor de Peluquería en Vivo</h1>
+                    <p class="text-sm text-slate-500">Cambia el estado de la mascota para que la IA le avise automáticamente al dueño por WhatsApp con el total a pagar en su moneda local.</p>
+                </div>
+
+                <div id="contenedor-tarjetas-spa" class="grid grid-cols-2 gap-6">
+                    <!-- Se llena dinámicamente según el país (USD o COP) -->
+                </div>
+            </section>
+
+            <!-- 3. VISTA TARIFARIO PET SPA (CON CÁLCULO DE IVA LOCAL) -->
+            <section id="vista-spa-tarifas" class="hidden">
+                <div class="mb-6">
+                    <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded-full">Módulo Pet Spa · Motor Fiscal</span>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-2">Tarifario por Raza y Tamaño (Cotizador de IA)</h1>
+                    <p class="text-sm text-slate-500">Estos son los precios exactos que tu agente de WhatsApp entrega cuando un cliente pregunta cuánto cuesta un baño.</p>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b">
+                            <tr>
+                                <th class="p-4">Servicio de Grooming</th>
+                                <th class="p-4">Precio Base (Sin IVA)</th>
+                                <th class="p-4">Impuesto Aplicable</th>
+                                <th class="p-4">Precio Final (Informado por IA)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-spa-tarifas" class="divide-y text-sm">
+                            <!-- Se llena dinámicamente con JS según Ecuador o Colombia -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. VISTA VETERINARIA: ALERTAS DE VACUNACIÓN -->
+            <section id="vista-vet-vacunas" class="hidden">
+                <div class="mb-6 flex justify-between items-end">
+                    <div>
+                        <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">Módulo Clínica Veterinaria</span>
+                        <h1 class="text-2xl font-bold text-slate-800 mt-2">Recordatorios Automáticos de Vacunación y Desparasitación</h1>
+                        <p class="text-sm text-slate-500">Pacientes leídos desde tu ERP cuya vacuna vence esta semana. Los servicios médicos veterinarios aplican tarifa Exenta (0% IVA).</p>
+                    </div>
+                    <button onclick="alert('🚀 La IA ha enviado 2 recordatorios personalizados por WhatsApp ofreciendo agendar turno médico.')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow transition">
+                        🤖 Disparar Recordatorios con IA Ahora
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b">
+                            <tr>
+                                <th class="p-4">Paciente (Mascota)</th>
+                                <th class="p-4">Propietario</th>
+                                <th class="p-4">Vacuna / Dosis Pendiente</th>
+                                <th class="p-4">Valor Consulta (Exento 0%)</th>
+                                <th class="p-4">Vencimiento</th>
+                                <th class="p-4">Estado IA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-vet-vacunas" class="divide-y text-sm">
+                            <!-- Se llena dinámicamente con JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 5. VISTA PET SHOP: INVENTARIO SINCRONIZADO (GRAVADOS VS EXENTOS) -->
+            <section id="vista-shop-inventario" class="hidden">
+                <div class="mb-6 flex justify-between items-end">
+                    <div>
+                        <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded-full">Módulo Pet Shop · Regla Tributaria</span>
+                        <h1 class="text-2xl font-bold text-slate-800 mt-2">Catálogo e Inventario en Tiempo Real para la IA</h1>
+                        <p class="text-sm text-slate-500">El sistema distingue automáticamente entre Medicinas/Alimentos Exentos (0%) y Accesorios Gravados (<span id="texto-iva-shop">15%</span>).</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b">
+                            <tr>
+                                <th class="p-4">SKU / ERP</th>
+                                <th class="p-4">Producto</th>
+                                <th class="p-4">Base</th>
+                                <th class="p-4">Régimen IVA</th>
+                                <th class="p-4">PVP Final (IA)</th>
+                                <th class="p-4">Stock</th>
+                                <th class="p-4">Acción de la IA</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-shop-inventario" class="divide-y text-sm">
+                            <!-- Se llena dinámicamente con JS según país -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 6. VISTA PUENTE TECNOLÓGICO: CONEXIÓN ERP -->
+            <section id="vista-erp" class="hidden">
+                <div class="mb-6">
+                    <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Integración sin Fricción</span>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-2">Centro de Sincronización con tu Software Actual (ERP)</h1>
+                    <p class="text-sm text-slate-500">No cambies tu programa contable o médico. Conéctalo aquí para que la IA conozca tu stock, precios, régimen de IVA y vacunas.</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Opción 1: Excel / CSV -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border-2 border-dashed border-blue-300 flex flex-col justify-between items-center text-center">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800">Nivel 1: Subida Rápida de Excel / CSV</h3>
+                        <p class="text-xs text-slate-500 mt-2 mb-6">Exporta el listado de productos (con su columna de IVA 0% o Gravado) o carnet de vacunas desde tu programa actual y suéltalo aquí.</p>
+                        <button onclick="alert('📂 Simulación: Archivo Excel procesado. Productos e impuestos actualizados en MongoDB.')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg transition">
+                            Seleccionar archivo de mi computadora
+                        </button>
+                    </div>
+
+                    <!-- Opción 2: API Directa -->
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-lg font-bold text-slate-800">Nivel 2: Conexión Automática vía API</h3>
+                                <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded">Tiempo Real</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mb-4">Compatible con sistemas líderes en Ecuador (SRI) y Colombia (DIAN).</p>
+                            
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Selecciona tu Sistema Contable / Clínico:</label>
+                            <select class="w-full border border-slate-300 rounded-lg p-2 text-sm mb-3 outline-none">
+                                <option>🇪🇨 Contífico / Perseo (Ecuador - SRI)</option>
+                                <option>🇨🇴 Siigo / Alegra (Colombia - DIAN)</option>
+                                <option>🏥 Qvet / OkVet / VetPraxis (Software Clínico)</option>
+                                <option>📊 Google Sheets (Hoja de Cálculo en vivo)</option>
+                            </select>
+
+                            <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Pega tu Token / API Key del ERP:</label>
+                            <input type="password" value="************************" class="w-full border border-slate-300 rounded-lg p-2 text-sm mb-4 outline-none">
+                        </div>
+                        <button onclick="alert('🔌 ¡Conexión verificada! Tu IA ahora lee precios e impuestos directamente de tu sistema contable.')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg transition">
+                            Guardar y Sincronizar Ahora
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. VISTA ENTRENAR A MI IA (ADAPTACIÓN BANCARIA Y FISCAL POR PAÍS) -->
+            <section id="vista-ia" class="hidden">
+                <div class="mb-6">
+                    <span class="bg-slate-200 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-full">Cerebro Conversacional</span>
+                    <h1 class="text-2xl font-bold text-slate-800 mt-2">Personalidad, Reglas Tributarias y Medios de Pago de tu IA</h1>
+                    <p class="text-sm text-slate-500">Así es como tu asistente virtual cobrará y presentará los precios en WhatsApp según tu país.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 max-w-2xl">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Regla Fiscal inyectada automáticamente al Prompt de Gemini:</label>
+                        <div id="prompt-fiscal-ia" class="bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-lg">
+                            <!-- Se actualiza con JS según EC o CO -->
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cuentas Bancarias que la IA enviará para cerrar ventas:</label>
+                        <textarea id="bancos-ia" rows="3" class="w-full border border-slate-300 rounded-lg p-3 text-sm text-slate-700 outline-none"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VISTAS COMPLEMENTARIAS -->
+            <section id="vista-campanas" class="hidden">
+                <h1 class="text-2xl font-bold text-slate-800">📢 Creador de Campañas Masivas por WhatsApp</h1>
+                <p class="text-slate-500 mt-2">Envía promociones segmentadas a dueños de perros o gatos con precios en tu moneda local.</p>
+            </section>
+            <section id="vista-vet-agenda" class="hidden">
+                <h1 class="text-2xl font-bold text-slate-800">🩺 Agenda Médica y Triaje de Urgencias</h1>
+                <p class="text-slate-500 mt-2">Citas médicas agendadas automáticamente por el bot receptor.</p>
+            </section>
+            <section id="vista-shop-pedidos" class="hidden">
+                <h1 class="text-2xl font-bold text-slate-800">🛵 Comanda de Pedidos a Domicilio</h1>
+                <p class="text-slate-500 mt-2">Órdenes pagadas por transferencia listas para despachar en moto.</p>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- 🧠 MOTOR BINACIONAL (ECUADOR / COLOMBIA) Y LÓGICA DEL SISTEMA     -->
+    <!-- ================================================================= -->
+    <script>
+        // 1. DICIONARIO FISCAL Y DE PRECIOS POR PAÍS
+        const configFiscal = {
+            EC: {
+                nombrePais: "🇪🇨 SRI Ecuador",
+                moneda: "USD",
+                ivaPorcentaje: 15,
+                bancosDefault: "Banco Pichincha Cta. Corriente #2100456789 o Produbanco #1200987654 a nombre de Clínica Huellitas (RUC: 1790011223001). Envíanos el comprobante por aquí.",
+                formatearDinero: (valor) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(valor),
+                spaMonitor: [
+                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+593 98 765 4321", estado: "En Baño 🚿", color: "blue", servicio: "Baño medicado + Corte de uñas", base: 18.00, gravado: true },
+                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+593 99 112 2334", estado: "En Corte ✂️", color: "amber", servicio: "Corte estilo Osito + Perfume", base: 25.00, gravado: true }
+                ],
+                spaTarifas: [
+                    { nombre: "Baño y Secado - Raza Pequeña (Hasta 10kg)", base: 15.00, gravado: true },
+                    { nombre: "Baño y Secado - Raza Mediana (11kg a 25kg)", base: 20.00, gravado: true },
+                    { nombre: "Grooming Completo - Raza Grande (+25kg)", base: 30.00, gravado: true }
+                ],
+                vacunas: [
+                    { paciente: "🐱 Michi (Gato Siamés)", dueno: "Andrea Naranjo (+593 98 444 5555)", vacuna: "Refuerzo Triple Felina", precio: 18.00, vence: "Vence en 2 días", estado: "⏳ Programado para envío" },
+                    { paciente: "🐕 Max (Pastor Alemán)", dueno: "Roberto Gómez (+593 99 333 2211)", vacuna: "Antirrábica Anual", precio: 15.00, vence: "Vence en 5 días", estado: "✅ Cita confirmada (Sábado 10am)" }
+                ],
+                inventario: [
+                    { sku: "PRO-AD-15K", nombre: "ProPlan Adulto Raza Mediana 15kg", base: 68.50, gravado: false, stock: 14 },
+                    { sku: "NEX-M-10K", nombre: "Antipulgas NexGard (Uso Veterinario)", base: 19.00, gravado: false, stock: 0 },
+                    { sku: "COL-LED-M", nombre: "Collar Paseador Luminoso LED + Correa", base: 12.00, gravado: true, stock: 8 }
+                ]
+            },
+            CO: {
+                nombrePais: "🇨🇴 DIAN Colombia",
+                moneda: "COP",
+                ivaPorcentaje: 19,
+                bancosDefault: "Transferencia por Nequi / Daviplata al 302 866 5643 o Bancolombia Ahorros #456-789012-34 (NIT: 901.234.567-8). Envíanos captura del pago por este chat.",
+                formatearDinero: (valor) => "$ " + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(valor)),
+                spaMonitor: [
+                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+57 300 765 4321", estado: "En Baño 🚿", color: "blue", servicio: "Baño medicado + Corte de uñas", base: 65000, gravado: true },
+                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+57 310 112 2334", estado: "En Corte ✂️", color: "amber", servicio: "Corte estilo Osito + Perfume", base: 85000, gravado: true }
+                ],
+                spaTarifas: [
+                    { nombre: "Baño y Secado - Raza Pequeña (Hasta 10kg)", base: 55000, gravado: true },
+                    { nombre: "Baño y Secado - Raza Mediana (11kg a 25kg)", base: 75000, gravado: true },
+                    { nombre: "Grooming Completo - Raza Grande (+25kg)", base: 110000, gravado: true }
+                ],
+                vacunas: [
+                    { paciente: "🐱 Michi (Gato Siamés)", dueno: "Andrea Naranjo (+57 315 444 5555)", vacuna: "Refuerzo Triple Felina", precio: 70000, vence: "Vence en 2 días", estado: "⏳ Programado para envío" },
+                    { paciente: "🐕 Max (Pastor Alemán)", dueno: "Roberto Gómez (+57 320 333 2211)", vacuna: "Antirrábica Anual", precio: 55000, vence: "Vence en 5 días", estado: "✅ Cita confirmada (Sábado 10am)" }
+                ],
+                inventario: [
+                    { sku: "PRO-AD-15K", nombre: "ProPlan Adulto Raza Mediana 15kg", base: 265000, gravado: false, stock: 14 },
+                    { sku: "NEX-M-10K", nombre: "Antipulgas NexGard (Uso Veterinario)", base: 72000, gravado: false, stock: 0 },
+                    { sku: "COL-LED-M", nombre: "Collar Paseador Luminoso LED + Correa", base: 45000, gravado: true, stock: 8 }
+                ]
+            }
+        };
+
+        // 2. FUNCIÓN QUE TRANSFORMA TODA LA INTERFAZ SEGÚN EL PAÍS ELEGIDO
+        function cambiarConfiguracionFiscal() {
+            const codigoPais = document.getElementById('selectPais').value;
+            const cfg = configFiscal[codigoPais];
+
+            // Actualizar insignia del menú lateral
+            document.getElementById('badge-fiscal').innerHTML = `
+                <span>${cfg.nombrePais}</span>
+                <span class="text-blue-600 font-bold">${cfg.moneda} · IVA ${cfg.ivaPorcentaje}%</span>
+            `;
+            document.getElementById('texto-iva-shop').innerText = `${cfg.ivaPorcentaje}%`;
+
+            // A. Renderizar Monitor de Peluquería (Spa)
+            const contSpa = document.getElementById('contenedor-tarjetas-spa');
+            contSpa.innerHTML = '';
+            cfg.spaMonitor.forEach(item => {
+                const totalConIva = item.gravado ? item.base * (1 + cfg.ivaPorcentaje / 100) : item.base;
+                const totalFormateado = cfg.formatearDinero(totalConIva);
+                contSpa.innerHTML += `
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 class="text-lg font-bold text-slate-800">${item.mascota}</h3>
+                                    <p class="text-xs text-slate-400">Dueño: ${item.dueno} (${item.tel})</p>
+                                </div>
+                                <span class="bg-purple-100 text-purple-700 text-xs font-bold px-2.5 py-1 rounded">${item.estado}</span>
+                            </div>
+                            <div class="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4">
+                                <p><strong>Servicio:</strong> ${item.servicio}</p>
+                                <p class="mt-1 text-xs text-slate-500">Base: ${cfg.formatearDinero(item.base)} + IVA (${cfg.ivaPorcentaje}%) = <strong class="text-slate-800 text-sm">${totalFormateado}</strong></p>
+                            </div>
+                        </div>
+                        <button onclick="simularAvisoWhatsApp('${item.mascota}', '${item.dueno}', '${totalFormateado}')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-2">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                            <span>¡Ya está listo! Avisar y cobrar ${totalFormateado}</span>
+                        </button>
+                    </div>
+                `;
+            });
+
+            // B. Renderizar Tabla de Tarifas Spa
+            const tablaTarifas = document.getElementById('tabla-spa-tarifas');
+            tablaTarifas.innerHTML = '';
+            cfg.spaTarifas.forEach(t => {
+                const final = t.base * (1 + cfg.ivaPorcentaje / 100);
+                tablaTarifas.innerHTML += `
+                    <tr>
+                        <td class="p-4 font-bold text-slate-800">${t.nombre}</td>
+                        <td class="p-4 text-slate-600">${cfg.formatearDinero(t.base)}</td>
+                        <td class="p-4"><span class="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs font-bold">Gravado IVA ${cfg.ivaPorcentaje}%</span></td>
+                        <td class="p-4 font-extrabold text-emerald-600">${cfg.formatearDinero(final)}</td>
+                    </tr>
+                `;
+            });
+
+            // C. Renderizar Vacunas (Veterinaria - Exento 0%)
+            const tablaVacunas = document.getElementById('tabla-vet-vacunas');
+            tablaVacunas.innerHTML = '';
+            cfg.vacunas.forEach(v => {
+                tablaVacunas.innerHTML += `
+                    <tr>
+                        <td class="p-4 font-bold text-slate-800">${v.paciente}</td>
+                        <td class="p-4 text-slate-600">${v.dueno}</td>
+                        <td class="p-4"><span class="bg-emerald-50 text-emerald-700 px-2 py-1 rounded text-xs font-bold">${v.vacuna}</span></td>
+                        <td class="p-4 font-bold text-slate-800">${cfg.formatearDinero(v.precio)} <span class="text-xs text-slate-400 font-normal">(IVA 0%)</span></td>
+                        <td class="p-4 text-amber-600 font-semibold">${v.vence}</td>
+                        <td class="p-4 text-slate-600 font-medium">${v.estado}</td>
+                    </tr>
+                `;
+            });
+
+            // D. Renderizar Inventario Pet Shop (Mezcla de Exentos 0% y Gravados 15%/19%)
+            const tablaShop = document.getElementById('tabla-shop-inventario');
+            tablaShop.innerHTML = '';
+            cfg.inventario.forEach(prod => {
+                const pvp = prod.gravado ? prod.base * (1 + cfg.ivaPorcentaje / 100) : prod.base;
+                const badgeIva = prod.gravado 
+                    ? `<span class="bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-bold">Gravado ${cfg.ivaPorcentaje}%</span>`
+                    : `<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-xs font-bold">Exento 0%</span>`;
+                
+                const badgeStock = prod.stock > 0
+                    ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full text-xs font-bold">${prod.stock} unds</span>`
+                    : `<span class="bg-red-100 text-red-800 px-2.5 py-1 rounded-full text-xs font-bold">0 (Agotado)</span>`;
+
+                const accionIA = prod.stock > 0
+                    ? `<span class="text-xs text-emerald-600 font-medium">🟢 Ofreciendo a ${cfg.formatearDinero(pvp)}</span>`
+                    : `<span class="text-xs text-red-500 font-medium">🔴 Venta bloqueada por IA</span>`;
+
+                tablaShop.innerHTML += `
+                    <tr>
+                        <td class="p-4 text-slate-400 font-mono text-xs">${prod.sku}</td>
+                        <td class="p-4 font-bold text-slate-800">${prod.nombre}</td>
+                        <td class="p-4 text-slate-500">${cfg.formatearDinero(prod.base)}</td>
+                        <td class="p-4">${badgeIva}</td>
+                        <td class="p-4 font-extrabold text-slate-900">${cfg.formatearDinero(pvp)}</td>
+                        <td class="p-4">${badgeStock}</td>
+                        <td class="p-4">${accionIA}</td>
+                    </tr>
+                `;
+            });
+
+            // E. Actualizar vista de Entrenamiento IA
+            document.getElementById('prompt-fiscal-ia').innerText = `[REGLA FISCAL ACTIVA - ${cfg.nombrePais}]: Opera exclusivamente en moneda ${cfg.moneda}. Aplica el ${cfg.ivaPorcentaje}% de IVA a servicios de estética/accesorios y 0% a servicios médicos/medicamentos exentos.`;
+            document.getElementById('bancos-ia').value = cfg.bancosDefault;
+        }
+
+        // 3. Función Camaleón: Oculta o muestra menús según lo contratado
+        function actualizarModulos() {
+            const tieneVet = document.getElementById('toggleVet').checked;
+            const tieneSpa = document.getElementById('toggleSpa').checked;
+            const tieneShop = document.getElementById('toggleShop').checked;
+
+            document.getElementById('menu-vet').style.display = tieneVet ? 'block' : 'none';
+            document.getElementById('menu-spa').style.display = tieneSpa ? 'block' : 'none';
+            document.getElementById('menu-shop').style.display = tieneShop ? 'block' : 'none';
+        }
+
+        // 4. Navegación entre pantallas sin recargar la página
+        function mostrarVista(idVista, botonPresionado) {
+            const secciones = document.querySelectorAll('main > section');
+            secciones.forEach(sec => sec.classList.add('hidden'));
+
+            document.getElementById(idVista).classList.remove('hidden');
+
+            const botones = document.querySelectorAll('.nav-btn');
+            botones.forEach(btn => {
+                btn.classList.remove('bg-blue-50', 'text-blue-700', 'font-semibold');
+                btn.classList.add('text-slate-600');
+            });
+            if (botonPresionado) {
+                botonPresionado.classList.add('bg-blue-50', 'text-blue-700', 'font-semibold');
+                botonPresionado.classList.remove('text-slate-600');
+            }
+        }
+
+        // 5. Simulación del botón mágico del Pet Spa con precio e IVA local
+        function simularAvisoWhatsApp(mascota, dueno, totalFormateado) {
+            const bancos = document.getElementById('bancos-ia').value;
+            alert(`📲 ¡WHATSAPP ENVIADO AUTOMÁTICAMENTE!\n\nPara: ${dueno}\nMensaje: "¡Hola ${dueno}! 🐾 Te escribimos de Clínica & Spa Huellitas para avisarte que ${mascota} ya salió del baño, quedó hermoso y perfumado ✨.\n\n💰 Total a pagar (IVA incluido): ${totalFormateado}\n🏦 Medios de pago: ${bancos}"`);
+        }
+
+        // 6. Conectar con tu servidor real en Render para traer los Leads de MongoDB
+        async function cargarLeadsReales() {
+            const tbody = document.getElementById('tabla-crm-body');
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-blue-600 font-bold">⏳ Trayendo prospectos reales desde tu MongoDB en Render...</td></tr>';
+            
+            try {
+                const res = await fetch('https://mascotasiadev.onrender.com/api/dashboard/leads/1433813413148961');
+                const json = await res.json();
+                
+                if (json.success && json.data.length > 0) {
+                    tbody.innerHTML = '';
+                    json.data.forEach(lead => {
+                        tbody.innerHTML += `
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-4">
+                                    <p class="font-bold text-slate-800">${lead.name}</p>
+                                    <p class="text-xs text-slate-400">${lead.phoneNumber}</p>
+                                </td>
+                                <td class="p-4 text-slate-600">${lead.summary}</td>
+                                <td class="p-4">
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-semibold">Sincronizado BD</span>
+                                </td>
+                                <td class="p-4">
+                                    <button class="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-semibold">
+                                        <i class="fa-brands fa-whatsapp mr-1"></i> Contactar
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">No se encontraron leads en el servidor.</td></tr>';
+                }
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error conectando con Render.</td></tr>';
+            }
+        }
+
+        // Inicializar datos al abrir la página
+        cambiarConfiguracionFiscal();
+    </script>
+</body>
+</html>

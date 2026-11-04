@@ -1,21 +1,18 @@
-// src/models/Tenant.js
 const mongoose = require('mongoose');
 
 const tenantSchema = new mongoose.Schema({
-  nombreNegocio: { type: String, required: true },
-  telefonoWhatsApp: { type: String, required: true, unique: true }, // El número que conectarán a la API
-  
-  // Banderas de Funciones (Feature Flags) para activar módulos según lo que compren
-  modulosActivos: {
-    petshop: { type: Boolean, default: false }, // Activa el catálogo de productos
-    petspa: { type: Boolean, default: false },  // Activa agendamiento por tiempos
-    veterinaria: { type: Boolean, default: false } // Activa el triage y campañas profilácticas
-  },
-  
-  // Control financiero para tu Súper Admin
-  estadoSuscripcion: { type: String, default: 'activa', enum: ['activa', 'pendiente', 'cancelada'] },
-  fechaCorte: { type: Date }
-
-}, { timestamps: true });
+    tenantId: { type: String, required: true, unique: true }, // 👈 El phone_number_id de Meta
+    nombreNegocio: { type: String, required: true },
+    pais: { type: String, enum: ['EC', 'CO'], default: 'EC' }, // 🇪🇨 Ecuador o 🇨🇴 Colombia
+    ciudad: { type: String, default: 'No especificada' },
+    modulos: {
+        vet: { type: Boolean, default: false },
+        spa: { type: Boolean, default: false },
+        shop: { type: Boolean, default: false }
+    },
+    erp: { type: String, default: 'Excel / CSV Manual' },
+    activo: { type: Boolean, default: true }, // 👈 Interruptor maestro de cobro (Corte de servicio)
+    fechaCreacion: { type: Date, default: Date.now }
+});
 
 module.exports = mongoose.model('Tenant', tenantSchema);

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MascotasIADev - Mi Negocio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex h-screen font-sans">
+
+    <!-- Barra lateral de la Veterinaria -->
+    <div class="w-64 bg-blue-700 text-white flex flex-col shadow-xl z-10">
+        <div class="p-6 text-xl font-bold border-b border-blue-600">🐾 Mi Veterinaria</div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="#" class="block px-4 py-2 bg-blue-800 rounded font-medium">📋 CRM (Prospectos)</a>
+            <a href="#" class="block px-4 py-2 hover:bg-blue-600 rounded">📅 Agenda y Citas</a>
+            <a href="#" class="block px-4 py-2 hover:bg-blue-600 rounded">📦 Inventario y Precios</a>
+            <a href="#" class="block px-4 py-2 hover:bg-blue-600 rounded">📢 Campañas (Masivos)</a>
+            <a href="#" class="block px-4 py-2 hover:bg-blue-600 rounded">🤖 Entrenar mi IA</a>
+        </nav>
+    </div>
+
+    <!-- Contenido del CRM -->
+    <div class="flex-1 p-8 overflow-y-auto">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">CRM de Ventas - Leads Capturados por IA</h1>
+        
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 text-sm uppercase tracking-wider">
+                        <th class="p-4 border-b">Cliente</th>
+                        <th class="p-4 border-b">Interés</th>
+                        <th class="p-4 border-b">Estado de Venta</th>
+                        <th class="p-4 border-b">Acción</th>
+                    </tr>
+                </thead>
+                <tbody class="text-sm">
+                    <!-- Fila 1 -->
+                    <tr class="hover:bg-gray-50 border-b">
+                        <td class="p-4">
+                            <p class="font-bold text-gray-800">María López</p>
+                            <p class="text-xs text-gray-500">+593 99 123 4567</p>
+                        </td>
+                        <td class="p-4 text-gray-600">Pregunta por baño para Bulldog Francés</td>
+                        <td class="p-4">
+                            <select class="border rounded p-1 text-sm bg-yellow-50 text-yellow-700 outline-none">
+                                <option>Pendiente de Contacto</option>
+                                <option>En Negociación</option>
+                                <option>Cita Agendada</option>
+                                <option>Venta Perdida</option>
+                            </select>
+                        </td>
+                        <td class="p-4">
+                            <button class="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 px-3 py-1 rounded">Ver Chat</button>
+                        </td>
+                    </tr>
+                    <!-- Fila 2 -->
+                    <tr class="hover:bg-gray-50 border-b">
+                        <td class="p-4">
+                            <p class="font-bold text-gray-800">Carlos Ruiz</p>
+                            <p class="text-xs text-gray-500">+593 98 765 4321</p>
+                        </td>
+                        <td class="p-4 text-gray-600">Quiere comprar 2 sacos de ProPlan Gatos</td>
+                        <td class="p-4">
+                            <select class="border rounded p-1 text-sm bg-green-50 text-green-700 outline-none">
+                                <option>Cita Agendada</option>
+                                <option>En Negociación</option>
+                                <option>Pendiente de Contacto</option>
+                            </select>
+                        </td>
+                        <td class="p-4">
+                            <button class="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 px-3 py-1 rounded">Ver Chat</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
