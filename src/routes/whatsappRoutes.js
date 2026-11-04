@@ -6,8 +6,7 @@ const Contact = require('../models/Contact');
 const Tenant = require('../models/Tenant'); // 👈 Importamos el modelo Multi-Tenant
 
 // Inicializamos Gemini SDK oficial
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // ====================================================
 // 1. VERIFICACIÓN DEL WEBHOOK (META)
 // ====================================================
