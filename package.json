@@ -1,24 +1,15 @@
 {
   "name": "saas-ia-pets",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "cors": "^2.8.6",
-    "dotenv": "^18.0.9",
-    "express": "^5.3.0",
-    "mongoose": "^9.11.4"
-  }
-}
-
-{
+  "description": "SaaS B2B Multi-tenant para veterinarias y spas",
   "dependencies": {
     "@google/genai": "^0.1.1",
     "cors": "^2.8.5",
