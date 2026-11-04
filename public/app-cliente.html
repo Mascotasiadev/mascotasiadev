@@ -10,16 +10,24 @@
 <body class="bg-slate-50 flex flex-col h-screen font-sans overflow-hidden">
 
     <!-- ================================================================= -->
-    <!-- 🛠️ BARRA DE SIMULACIÓN (MÓDULOS + MOTOR FISCAL EC/CO)            -->
+    <!-- 🚨 BANNER DE SUSPENSIÓN POR FALTA DE PAGO (OCULTO POR DEFECTO)    -->
+    <!-- ================================================================= -->
+    <div id="banner-suspendido" class="hidden bg-red-600 text-white px-6 py-2.5 text-center text-sm font-bold shadow-md z-30 flex justify-center items-center space-x-2">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span>SERVICIO SUSPENDIDO: Tu agente de IA en WhatsApp está pausado temporalmente. Contacta a soporte administrativo para reactivar tu cuenta.</span>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- 🛠️ BARRA DE SIMULACIÓN Y SINCRONIZACIÓN CON MONGODB               -->
     <!-- ================================================================= -->
     <div class="bg-slate-900 text-white px-6 py-3 flex justify-between items-center border-b border-slate-700 shadow-lg z-20">
         <div class="flex items-center space-x-3">
-            <span class="bg-amber-500 text-slate-900 text-xs font-extrabold px-2.5 py-1 rounded uppercase tracking-wider">Simulador Arquitecto</span>
+            <span id="estado-sincronizacion-bd" class="bg-emerald-500 text-slate-950 text-xs font-extrabold px-2.5 py-1 rounded uppercase tracking-wider">Conectado a MongoDB</span>
             
             <!-- Selector de País / Motor Fiscal -->
             <div class="flex items-center space-x-2 bg-slate-800 border border-slate-600 px-3 py-1 rounded-lg">
                 <i class="fa-solid fa-earth-americas text-blue-400 text-xs"></i>
-                <span class="text-xs text-slate-300 font-semibold">País del Cliente:</span>
+                <span class="text-xs text-slate-300 font-semibold">Régimen Fiscal:</span>
                 <select id="selectPais" onchange="cambiarConfiguracionFiscal()" class="bg-slate-900 text-amber-400 font-bold text-xs rounded px-2 py-0.5 outline-none border border-slate-700 cursor-pointer">
                     <option value="EC">🇪🇨 Ecuador (USD $ - IVA 15%)</option>
                     <option value="CO">🇨🇴 Colombia (COP $ - IVA 19%)</option>
@@ -27,7 +35,7 @@
             </div>
         </div>
 
-        <!-- Interruptores de Módulos -->
+        <!-- Interruptores de Módulos (Reflejan lo guardado en el SuperAdmin) -->
         <div class="flex space-x-6 text-sm font-medium">
             <label class="flex items-center space-x-2 cursor-pointer hover:text-emerald-400 transition">
                 <input type="checkbox" id="toggleVet" checked onchange="actualizarModulos()" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer">
@@ -59,8 +67,8 @@
                             🐾
                         </div>
                         <div>
-                            <h2 class="font-bold text-slate-800 leading-tight">Clínica & Spa Huellitas</h2>
-                            <span class="text-xs text-emerald-600 font-semibold flex items-center mt-0.5">
+                            <h2 id="ui-nombre-negocio" class="font-bold text-slate-800 leading-tight">Cargando negocio...</h2>
+                            <span id="ui-estado-ia" class="text-xs text-emerald-600 font-semibold flex items-center mt-0.5">
                                 <span class="w-2 h-2 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></span> IA Conectada a WhatsApp
                             </span>
                         </div>
@@ -144,7 +152,7 @@
 
             <!-- Pie de barra lateral -->
             <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500 flex justify-between items-center">
-                <span>ID: 1433813413148961</span>
+                <span>ID: <strong id="ui-tenant-id" class="font-mono text-slate-700">1433813413148961</strong></span>
                 <span class="font-bold text-blue-600">MascotasIADev</span>
             </div>
         </aside>
@@ -163,7 +171,7 @@
                     </div>
                     <button onclick="cargarLeadsReales()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-2">
                         <i class="fa-solid fa-rotate"></i>
-                        <span>Sincronizar con Servidor Render</span>
+                        <span>Sincronizar Leads de este Negocio</span>
                     </button>
                 </div>
 
@@ -179,23 +187,7 @@
                         </thead>
                         <tbody id="tabla-crm-body" class="divide-y divide-slate-100 text-sm">
                             <tr>
-                                <td class="p-4">
-                                    <p class="font-bold text-slate-800">Laura Gómez</p>
-                                    <p class="text-xs text-slate-400">+593 99 888 7766</p>
-                                </td>
-                                <td class="p-4 text-slate-600">Preguntó por baño medicado para Golden Retriever y alimento hipoalergénico.</td>
-                                <td class="p-4">
-                                    <select class="bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-2.5 py-1 text-xs font-semibold outline-none">
-                                        <option>🔥 Nuevo Lead</option>
-                                        <option>💬 En seguimiento</option>
-                                        <option>✅ Cita / Venta Cerrada</option>
-                                    </select>
-                                </td>
-                                <td class="p-4">
-                                    <button class="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-semibold transition">
-                                        <i class="fa-brands fa-whatsapp mr-1"></i> Abrir Chat
-                                    </button>
-                                </td>
+                                <td colspan="4" class="p-6 text-center text-slate-400">Cargando prospectos del negocio...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -210,9 +202,7 @@
                     <p class="text-sm text-slate-500">Cambia el estado de la mascota para que la IA le avise automáticamente al dueño por WhatsApp con el total a pagar en su moneda local.</p>
                 </div>
 
-                <div id="contenedor-tarjetas-spa" class="grid grid-cols-2 gap-6">
-                    <!-- Se llena dinámicamente según el país (USD o COP) -->
-                </div>
+                <div id="contenedor-tarjetas-spa" class="grid grid-cols-2 gap-6"></div>
             </section>
 
             <!-- 3. VISTA TARIFARIO PET SPA (CON CÁLCULO DE IVA LOCAL) -->
@@ -233,9 +223,7 @@
                                 <th class="p-4">Precio Final (Informado por IA)</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-spa-tarifas" class="divide-y text-sm">
-                            <!-- Se llena dinámicamente con JS según Ecuador o Colombia -->
-                        </tbody>
+                        <tbody id="tabla-spa-tarifas" class="divide-y text-sm"></tbody>
                     </table>
                 </div>
             </section>
@@ -265,9 +253,7 @@
                                 <th class="p-4">Estado IA</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-vet-vacunas" class="divide-y text-sm">
-                            <!-- Se llena dinámicamente con JS -->
-                        </tbody>
+                        <tbody id="tabla-vet-vacunas" class="divide-y text-sm"></tbody>
                     </table>
                 </div>
             </section>
@@ -295,9 +281,7 @@
                                 <th class="p-4">Acción de la IA</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-shop-inventario" class="divide-y text-sm">
-                            <!-- Se llena dinámicamente con JS según país -->
-                        </tbody>
+                        <tbody id="tabla-shop-inventario" class="divide-y text-sm"></tbody>
                     </table>
                 </div>
             </section>
@@ -307,11 +291,10 @@
                 <div class="mb-6">
                     <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">Integración sin Fricción</span>
                     <h1 class="text-2xl font-bold text-slate-800 mt-2">Centro de Sincronización con tu Software Actual (ERP)</h1>
-                    <p class="text-sm text-slate-500">No cambies tu programa contable o médico. Conéctalo aquí para que la IA conozca tu stock, precios, régimen de IVA y vacunas.</p>
+                    <p class="text-sm text-slate-500">Tu método actual configurado es: <strong id="ui-metodo-erp" class="text-blue-600">Cargando...</strong></p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-6">
-                    <!-- Opción 1: Excel / CSV -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border-2 border-dashed border-blue-300 flex flex-col justify-between items-center text-center">
                         <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-2xl mb-4">
                             <i class="fa-solid fa-file-excel"></i>
@@ -323,7 +306,6 @@
                         </button>
                     </div>
 
-                    <!-- Opción 2: API Directa -->
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
                         <div>
                             <div class="flex justify-between items-center mb-4">
@@ -350,7 +332,7 @@
                 </div>
             </section>
 
-            <!-- 7. VISTA ENTRENAR A MI IA (ADAPTACIÓN BANCARIA Y FISCAL POR PAÍS) -->
+            <!-- 7. VISTA ENTRENAR A MI IA -->
             <section id="vista-ia" class="hidden">
                 <div class="mb-6">
                     <span class="bg-slate-200 text-slate-800 text-xs font-bold px-2.5 py-1 rounded-full">Cerebro Conversacional</span>
@@ -361,9 +343,7 @@
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4 max-w-2xl">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Regla Fiscal inyectada automáticamente al Prompt de Gemini:</label>
-                        <div id="prompt-fiscal-ia" class="bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-lg">
-                            <!-- Se actualiza con JS según EC o CO -->
-                        </div>
+                        <div id="prompt-fiscal-ia" class="bg-slate-900 text-emerald-400 font-mono text-xs p-4 rounded-lg"></div>
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Cuentas Bancarias que la IA enviará para cerrar ventas:</label>
@@ -390,20 +370,25 @@
     </div>
 
     <!-- ================================================================= -->
-    <!-- 🧠 MOTOR BINACIONAL (ECUADOR / COLOMBIA) Y LÓGICA DEL SISTEMA     -->
+    <!-- 🧠 MOTOR BINACIONAL Y CONEXIÓN EN TIEMPO REAL CON MONGODB         -->
     <!-- ================================================================= -->
     <script>
-        // 1. DICIONARIO FISCAL Y DE PRECIOS POR PAÍS
+        const API_BASE = 'https://mascotasiadev.onrender.com/api';
+        // Leer el tenantId desde la URL (?tenantId=...) o usar el demo por defecto
+        const urlParams = new URLSearchParams(window.location.search);
+        let currentTenantId = urlParams.get('tenantId') || '1433813413148961';
+
+        // 1. DICCIONARIO FISCAL Y DE PRECIOS POR PAÍS
         const configFiscal = {
             EC: {
                 nombrePais: "🇪🇨 SRI Ecuador",
                 moneda: "USD",
                 ivaPorcentaje: 15,
-                bancosDefault: "Banco Pichincha Cta. Corriente #2100456789 o Produbanco #1200987654 a nombre de Clínica Huellitas (RUC: 1790011223001). Envíanos el comprobante por aquí.",
+                bancosDefault: "Banco Pichincha Cta. Corriente #2100456789 o Produbanco #1200987654 (RUC: 1790011223001). Envíanos el comprobante por aquí.",
                 formatearDinero: (valor) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 }).format(valor),
                 spaMonitor: [
-                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+593 98 765 4321", estado: "En Baño 🚿", color: "blue", servicio: "Baño medicado + Corte de uñas", base: 18.00, gravado: true },
-                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+593 99 112 2334", estado: "En Corte ✂️", color: "amber", servicio: "Corte estilo Osito + Perfume", base: 25.00, gravado: true }
+                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+593 98 765 4321", estado: "En Baño 🚿", servicio: "Baño medicado + Corte de uñas", base: 18.00, gravado: true },
+                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+593 99 112 2334", estado: "En Corte ✂️", servicio: "Corte estilo Osito + Perfume", base: 25.00, gravado: true }
                 ],
                 spaTarifas: [
                     { nombre: "Baño y Secado - Raza Pequeña (Hasta 10kg)", base: 15.00, gravado: true },
@@ -427,8 +412,8 @@
                 bancosDefault: "Transferencia por Nequi / Daviplata al 302 866 5643 o Bancolombia Ahorros #456-789012-34 (NIT: 901.234.567-8). Envíanos captura del pago por este chat.",
                 formatearDinero: (valor) => "$ " + new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(Math.round(valor)),
                 spaMonitor: [
-                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+57 300 765 4321", estado: "En Baño 🚿", color: "blue", servicio: "Baño medicado + Corte de uñas", base: 65000, gravado: true },
-                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+57 310 112 2334", estado: "En Corte ✂️", color: "amber", servicio: "Corte estilo Osito + Perfume", base: 85000, gravado: true }
+                    { mascota: "🐶 Rocky (Bulldog Francés)", dueno: "Carlos Ruiz", tel: "+57 300 765 4321", estado: "En Baño 🚿", servicio: "Baño medicado + Corte de uñas", base: 65000, gravado: true },
+                    { mascota: "🐩 Princesa (Poodle)", dueno: "Ana Torres", tel: "+57 310 112 2334", estado: "En Corte ✂️", servicio: "Corte estilo Osito + Perfume", base: 85000, gravado: true }
                 ],
                 spaTarifas: [
                     { nombre: "Baño y Secado - Raza Pequeña (Hasta 10kg)", base: 55000, gravado: true },
@@ -447,12 +432,51 @@
             }
         };
 
-        // 2. FUNCIÓN QUE TRANSFORMA TODA LA INTERFAZ SEGÚN EL PAÍS ELEGIDO
+        // 2. CARGAR DATOS REALES DEL CLIENTE DESDE MONGODB AL ABRIR LA PÁGINA
+        async function inicializarPanelCliente() {
+            document.getElementById('ui-tenant-id').innerText = currentTenantId;
+
+            try {
+                const res = await fetch(`${API_BASE}/tenants/${currentTenantId}`);
+                const json = await res.json();
+
+                if (json.success && json.data) {
+                    const t = json.data;
+                    document.getElementById('ui-nombre-negocio').innerText = t.nombreNegocio;
+                    document.getElementById('ui-metodo-erp').innerText = t.erp || 'Excel / CSV Manual';
+
+                    // Aplicar país guardado en MongoDB
+                    document.getElementById('selectPais').value = t.pais || 'EC';
+
+                    // Aplicar módulos contratados guardados en MongoDB
+                    const mod = t.modulos || { vet: true, spa: true, shop: true };
+                    document.getElementById('toggleVet').checked = !!mod.vet;
+                    document.getElementById('toggleSpa').checked = !!mod.spa;
+                    document.getElementById('toggleShop').checked = !!mod.shop;
+
+                    // Verificar si está al día o suspendido
+                    if (t.activo === false) {
+                        document.getElementById('banner-suspendido').classList.remove('hidden');
+                        document.getElementById('ui-estado-ia').innerHTML = `<span class="w-2 h-2 bg-red-500 rounded-full mr-1.5"></span> <span class="text-red-600">Bot Pausado (Impago)</span>`;
+                    }
+                } else {
+                    document.getElementById('ui-nombre-negocio').innerText = "Clínica & Spa Demo";
+                }
+            } catch (e) {
+                console.warn("Usando modo offline local:", e);
+                document.getElementById('ui-nombre-negocio').innerText = "Clínica & Spa Huellitas";
+            }
+
+            actualizarModulos();
+            cambiarConfiguracionFiscal();
+            cargarLeadsReales();
+        }
+
+        // 3. FUNCIÓN QUE TRANSFORMA TODA LA INTERFAZ SEGÚN EL PAÍS ELEGIDO
         function cambiarConfiguracionFiscal() {
             const codigoPais = document.getElementById('selectPais').value;
             const cfg = configFiscal[codigoPais];
 
-            // Actualizar insignia del menú lateral
             document.getElementById('badge-fiscal').innerHTML = `
                 <span>${cfg.nombrePais}</span>
                 <span class="text-blue-600 font-bold">${cfg.moneda} · IVA ${cfg.ivaPorcentaje}%</span>
@@ -519,7 +543,7 @@
                 `;
             });
 
-            // D. Renderizar Inventario Pet Shop (Mezcla de Exentos 0% y Gravados 15%/19%)
+            // D. Renderizar Inventario Pet Shop
             const tablaShop = document.getElementById('tabla-shop-inventario');
             tablaShop.innerHTML = '';
             cfg.inventario.forEach(prod => {
@@ -554,7 +578,7 @@
             document.getElementById('bancos-ia').value = cfg.bancosDefault;
         }
 
-        // 3. Función Camaleón: Oculta o muestra menús según lo contratado
+        // 4. Función Camaleón: Oculta o muestra menús según lo contratado
         function actualizarModulos() {
             const tieneVet = document.getElementById('toggleVet').checked;
             const tieneSpa = document.getElementById('toggleSpa').checked;
@@ -565,7 +589,7 @@
             document.getElementById('menu-shop').style.display = tieneShop ? 'block' : 'none';
         }
 
-        // 4. Navegación entre pantallas sin recargar la página
+        // 5. Navegación entre pantallas sin recargar la página
         function mostrarVista(idVista, botonPresionado) {
             const secciones = document.querySelectorAll('main > section');
             secciones.forEach(sec => sec.classList.add('hidden'));
@@ -583,19 +607,20 @@
             }
         }
 
-        // 5. Simulación del botón mágico del Pet Spa con precio e IVA local
+        // 6. Simulación del botón mágico del Pet Spa con precio e IVA local
         function simularAvisoWhatsApp(mascota, dueno, totalFormateado) {
             const bancos = document.getElementById('bancos-ia').value;
-            alert(`📲 ¡WHATSAPP ENVIADO AUTOMÁTICAMENTE!\n\nPara: ${dueno}\nMensaje: "¡Hola ${dueno}! 🐾 Te escribimos de Clínica & Spa Huellitas para avisarte que ${mascota} ya salió del baño, quedó hermoso y perfumado ✨.\n\n💰 Total a pagar (IVA incluido): ${totalFormateado}\n🏦 Medios de pago: ${bancos}"`);
+            const nombreNegocio = document.getElementById('ui-nombre-negocio').innerText;
+            alert(`📲 ¡WHATSAPP ENVIADO AUTOMÁTICAMENTE!\n\nPara: ${dueno}\nMensaje: "¡Hola ${dueno}! 🐾 Te escribimos de ${nombreNegocio} para avisarte que ${mascota} ya salió del baño, quedó hermoso y perfumado ✨.\n\n💰 Total a pagar (IVA incluido): ${totalFormateado}\n🏦 Medios de pago: ${bancos}"`);
         }
 
-        // 6. Conectar con tu servidor real en Render para traer los Leads de MongoDB
+        // 7. Conectar con tu servidor real en Render para traer los Leads de ESTE negocio específico
         async function cargarLeadsReales() {
             const tbody = document.getElementById('tabla-crm-body');
-            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-blue-600 font-bold">⏳ Trayendo prospectos reales desde tu MongoDB en Render...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-blue-600 font-bold">⏳ Buscando prospectos de este negocio en MongoDB...</td></tr>';
             
             try {
-                const res = await fetch('https://mascotasiadev.onrender.com/api/dashboard/leads/1433813413148961');
+                const res = await fetch(`${API_BASE}/dashboard/leads/${currentTenantId}`);
                 const json = await res.json();
                 
                 if (json.success && json.data.length > 0) {
@@ -609,26 +634,26 @@
                                 </td>
                                 <td class="p-4 text-slate-600">${lead.summary}</td>
                                 <td class="p-4">
-                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-semibold">Sincronizado BD</span>
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg px-2.5 py-1 text-xs font-semibold">Capturado por IA</span>
                                 </td>
                                 <td class="p-4">
-                                    <button class="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-semibold">
+                                    <a href="https://wa.me/${lead.phoneNumber}" target="_blank" class="text-emerald-600 hover:bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg text-xs font-semibold inline-block">
                                         <i class="fa-brands fa-whatsapp mr-1"></i> Contactar
-                                    </button>
+                                    </a>
                                 </td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-500">No se encontraron leads en el servidor.</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-400">Aún no hay prospectos registrados bajo el ID <span class="font-mono font-bold">${currentTenantId}</span>.</td></tr>`;
                 }
             } catch (e) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error conectando con Render.</td></tr>';
             }
         }
 
-        // Inicializar datos al abrir la página
-        cambiarConfiguracionFiscal();
+        // Arrancar el panel sincronizado con MongoDB
+        inicializarPanelCliente();
     </script>
 </body>
 </html>

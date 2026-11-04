@@ -13,7 +13,21 @@ router.get('/', async (req, res) => {
     }
 });
 
-// 2. CREAR UN NUEVO CLIENTE (Desde el modal de SuperAdmin)
+// 2. OBTENER UN CLIENTE ESPECÍFICO POR SU TENANT ID (Para el Panel del Cliente)
+router.get('/:tenantId', async (req, res) => {
+    try {
+        const tenant = await Tenant.findOne({ tenantId: req.params.tenantId });
+        if (!tenant) {
+            return res.status(404).json({ success: false, message: 'Negocio no encontrado en la base de datos' });
+        }
+        res.status(200).json({ success: true, data: tenant });
+    } catch (error) {
+        console.error("Error al obtener detalle del tenant:", error);
+        res.status(500).json({ success: false, message: 'Error interno del servidor' });
+    }
+});
+
+// 3. CREAR UN NUEVO CLIENTE (Desde el modal de SuperAdmin)
 router.post('/create', async (req, res) => {
     try {
         const { tenantId, nombreNegocio, pais, ciudad, modulos, erp } = req.body;
@@ -41,7 +55,7 @@ router.post('/create', async (req, res) => {
     }
 });
 
-// 3. CAMBIAR ESTADO O MÓDULOS DE UN CLIENTE (Interruptores en vivo)
+// 4. CAMBIAR ESTADO O MÓDULOS DE UN CLIENTE (Interruptores en vivo)
 router.put('/update/:tenantId', async (req, res) => {
     try {
         const { modulos, activo, erp } = req.body;

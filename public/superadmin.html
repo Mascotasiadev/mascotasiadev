@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperAdmin HQ - Control Binacional SaaS</title>
+    <title>SuperAdmin HQ - Control Binacional SaaS (Conectado a MongoDB)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
@@ -27,10 +27,14 @@
 
             <!-- Navegación -->
             <nav class="p-4 space-y-1 text-sm">
-                <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Operaciones</p>
+                <p class="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Operaciones en Vivo</p>
                 <a href="#" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 font-semibold">
                     <i class="fa-solid fa-building-shield w-5 text-center"></i>
-                    <span>Clientes (Tenants)</span>
+                    <span>Clientes (Tenants BD)</span>
+                </a>
+                <a href="#" onclick="cargarTenantsDesdeMongo()" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition">
+                    <i class="fa-solid fa-rotate w-5 text-center"></i>
+                    <span>Refrescar Base de Datos</span>
                 </a>
                 <a href="#" onclick="alert('Módulo financiero: Consolida tus cobros en USD de Ecuador y COP de Colombia en una sola caja.')" class="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 transition">
                     <i class="fa-solid fa-sack-dollar w-5 text-center"></i>
@@ -46,9 +50,9 @@
         <!-- Estado del Servidor Render -->
         <div class="p-4 m-4 rounded-xl bg-slate-900 border border-slate-800 text-xs">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-slate-400 font-semibold">Motor en Render:</span>
-                <span class="flex items-center text-emerald-400 font-bold">
-                    <span class="w-2 h-2 bg-emerald-400 rounded-full mr-1.5 animate-ping"></span> Online
+                <span class="text-slate-400 font-semibold">MongoDB + Render:</span>
+                <span id="indicador-conexion" class="flex items-center text-emerald-400 font-bold">
+                    <span class="w-2 h-2 bg-emerald-400 rounded-full mr-1.5 animate-ping"></span> Conectado
                 </span>
             </div>
             <p class="text-slate-500 truncate">mascotasiadev.onrender.com</p>
@@ -63,13 +67,19 @@
         <!-- Encabezado y Botón de Alta -->
         <div class="flex justify-between items-center mb-8">
             <div>
-                <h1 class="text-2xl font-bold text-white">Control Binacional de Negocios Afiliados (Multi-Tenant)</h1>
-                <p class="text-sm text-slate-400 mt-1">Gestiona veterinarias en Ecuador (USD - IVA 15%) y Colombia (COP - IVA 19%) desde un solo lugar.</p>
+                <h1 class="text-2xl font-bold text-white">Control Binacional de Negocios Afiliados (En Vivo con MongoDB)</h1>
+                <p class="text-sm text-slate-400 mt-1">Cada cambio que hagas aquí se guarda directamente en MongoDB Atlas y gobierna el bot de WhatsApp.</p>
             </div>
-            <button onclick="abrirModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2">
-                <i class="fa-solid fa-plus"></i>
-                <span>Dar de Alta Nuevo Cliente</span>
-            </button>
+            <div class="flex space-x-3">
+                <button onclick="cargarTenantsDesdeMongo()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl font-bold text-sm transition flex items-center space-x-2">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span>Sincronizar</span>
+                </button>
+                <button onclick="abrirModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Dar de Alta Nuevo Cliente</span>
+                </button>
+            </div>
         </div>
 
         <!-- Tarjetas de Métricas de TU Negocio -->
@@ -78,7 +88,7 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-xs font-bold text-slate-400 uppercase">Ingreso Consolidado (MRR)</p>
-                        <p id="kpi-mrr" class="text-3xl font-extrabold text-emerald-400 mt-1">$157.00 USD</p>
+                        <p id="kpi-mrr" class="text-3xl font-extrabold text-emerald-400 mt-1">$0.00 USD</p>
                     </div>
                     <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><i class="fa-solid fa-dollar-sign text-lg"></i></div>
                 </div>
@@ -88,12 +98,12 @@
             <div class="bg-slate-800/60 border border-slate-700/60 p-5 rounded-xl">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-xs font-bold text-slate-400 uppercase">Negocios Activos</p>
-                        <p id="kpi-clientes" class="text-3xl font-extrabold text-white mt-1">2</p>
+                        <p class="text-xs font-bold text-slate-400 uppercase">Negocios Activos en BD</p>
+                        <p id="kpi-clientes" class="text-3xl font-extrabold text-white mt-1">0</p>
                     </div>
                     <div class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-lg"><i class="fa-solid fa-earth-americas text-lg"></i></div>
                 </div>
-                <p class="text-xs text-slate-500 mt-3">🇪🇨 Ecuador y 🇨🇴 Colombia</p>
+                <p class="text-xs text-slate-500 mt-3">Leídos desde MongoDB Atlas</p>
             </div>
 
             <div class="bg-slate-800/60 border border-slate-700/60 p-5 rounded-xl">
@@ -122,8 +132,8 @@
         <!-- Tabla Maestra de Control de Clientes -->
         <div class="bg-slate-800/40 border border-slate-700/60 rounded-xl overflow-hidden shadow-xl">
             <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex justify-between items-center">
-                <h3 class="font-bold text-sm text-slate-200">Panel de Interruptores por Cliente (Feature Toggles & Régimen Fiscal)</h3>
-                <span class="text-xs text-slate-400">Haz clic en los módulos para activarlos o desactivarlos en tiempo real</span>
+                <h3 class="font-bold text-sm text-slate-200">Panel de Interruptores por Cliente (Conectado a MongoDB Atlas)</h3>
+                <span id="estado-guardado" class="text-xs text-emerald-400 font-semibold">🟢 Datos sincronizados con la nube</span>
             </div>
 
             <table class="w-full text-left border-collapse">
@@ -131,7 +141,7 @@
                     <tr class="bg-slate-900/50 text-slate-400 text-xs uppercase border-b border-slate-700/60">
                         <th class="p-4">Negocio / País</th>
                         <th class="p-4">Régimen Fiscal IA</th>
-                        <th class="p-4">Módulos Contratados (Clic para cambiar)</th>
+                        <th class="p-4">Módulos Contratados (Clic guarda en BD)</th>
                         <th class="p-4">Integración ERP</th>
                         <th class="p-4">Cobro Suscripción</th>
                         <th class="p-4">Estado del Bot IA</th>
@@ -139,7 +149,11 @@
                     </tr>
                 </thead>
                 <tbody id="tabla-tenants" class="divide-y divide-slate-800 text-sm">
-                    <!-- Las filas se generan dinámicamente con JavaScript abajo -->
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-indigo-400 font-bold">
+                            ⏳ Conectando con Render y descargando tus clientes desde MongoDB Atlas...
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -147,19 +161,19 @@
     </main>
 
     <!-- ================================================================= -->
-    <!-- ➕ MODAL PARA DAR DE ALTA UNA NUEVA VETERINARIA / SPA / SHOP      -->
+    <!-- ➕ MODAL PARA DAR DE ALTA UNA NUEVA VETERINARIA EN MONGODB        -->
     <!-- ================================================================= -->
     <div id="modal-nuevo" class="hidden fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50">
         <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg p-6 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-700 pb-4 mb-5">
-                <h3 class="text-lg font-bold text-white">➕ Registrar Nuevo Negocio (Ecuador / Colombia)</h3>
+                <h3 class="text-lg font-bold text-white">➕ Registrar Nuevo Negocio en MongoDB</h3>
                 <button onclick="cerrarModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
 
             <div class="space-y-4 text-sm">
                 <div>
                     <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Nombre Comercial del Cliente:</label>
-                    <input type="text" id="input-nombre" placeholder="Ej. Clínica Veterinaria Los Andes" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white outline-none focus:border-indigo-500">
+                    <input type="text" id="input-nombre" placeholder="Ej. Peluquería Canina Peluditos" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
@@ -179,7 +193,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">ID Teléfono Meta (Tenant ID):</label>
-                        <input type="text" id="input-tenant" placeholder="Ej. 1433813413148961" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none focus:border-indigo-500">
+                        <input type="text" id="input-tenant" placeholder="Ej. 573028665643" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white font-mono outline-none focus:border-indigo-500">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Sistema ERP que usa:</label>
@@ -213,59 +227,51 @@
 
             <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-slate-700">
                 <button onclick="cerrarModal()" class="px-4 py-2 rounded-lg text-slate-400 hover:bg-slate-700 text-sm font-semibold">Cancelar</button>
-                <button onclick="guardarNuevoCliente()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg">Crear Tenant y Activar IA</button>
+                <button id="btn-guardar-modal" onclick="guardarNuevoCliente()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg">Guardar en MongoDB</button>
             </div>
         </div>
     </div>
 
     <!-- ================================================================= -->
-    <!-- 🧠 LÓGICA DE CONTROL BINACIONAL DEL SUPER ADMIN                   -->
+    <!-- 🧠 LÓGICA DE CONEXIÓN EN TIEMPO REAL CON RENDER Y MONGODB         -->
     <!-- ================================================================= -->
     <script>
-        // Base de datos simulada con clientes de Ecuador y Colombia
-        let clientes = [
-            {
-                id: 1,
-                nombre: "Clínica & Spa Huellitas (Tu Demo)",
-                pais: "EC",
-                ciudad: "Quito, Ecuador",
-                tenantId: "1433813413148961",
-                modulos: { vet: true, spa: true, shop: true },
-                erp: "Contífico API (EC)",
-                activo: true
-            },
-            {
-                id: 2,
-                nombre: "Peluquería Canina Peluditos",
-                pais: "CO",
-                ciudad: "Medellín, Colombia",
-                tenantId: "573028665643",
-                modulos: { vet: false, spa: true, shop: true },
-                erp: "Siigo / Alegra API (CO)",
-                activo: true
-            },
-            {
-                id: 3,
-                nombre: "Agroveterinaria El Campo",
-                pais: "EC",
-                ciudad: "Guayaquil, Ecuador",
-                tenantId: "593991122334",
-                modulos: { vet: false, spa: false, shop: true },
-                erp: "Excel / CSV Manual",
-                activo: false // Cliente pausado
-            }
-        ];
+        const API_URL = 'https://mascotasiadev.onrender.com/api/tenants';
+        let clientes = [];
 
-        // Calcular precio mensual en USD ($29 por 1, $49 por 2, $79 por los 3) y su equivalente en Pesos Colombianos
+        // 1. DESCARGAR CLIENTES REALES DESDE MONGODB ATLAS
+        async function cargarTenantsDesdeMongo() {
+            const tbody = document.getElementById('tabla-tenants');
+            const estado = document.getElementById('estado-guardado');
+            estado.innerText = '⏳ Consultando MongoDB Atlas...';
+
+            try {
+                const respuesta = await fetch(API_URL);
+                const json = await respuesta.json();
+
+                if (json.success) {
+                    clientes = json.data;
+                    renderizarTabla();
+                    estado.innerText = '🟢 Sincronizado con MongoDB Atlas';
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-400">Error al leer datos del servidor.</td></tr>`;
+                }
+            } catch (error) {
+                console.error("Error conectando con Render:", error);
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-red-400">❌ No se pudo conectar con ${API_URL}. Verifica que Render haya terminado de desplegar.</td></tr>`;
+            }
+        }
+
+        // 2. CALCULAR TARIFA MENSUAL EN USD Y EQUIVALENTE EN COP
         function calcularTarifa(modulos, pais) {
-            const total = (modulos.vet ? 1 : 0) + (modulos.spa ? 1 : 0) + (modulos.shop ? 1 : 0);
+            const mod = modulos || { vet: false, spa: false, shop: false };
+            const total = (mod.vet ? 1 : 0) + (mod.spa ? 1 : 0) + (mod.shop ? 1 : 0);
             let usd = 0;
             if (total === 1) usd = 29;
             if (total === 2) usd = 49;
             if (total === 3) usd = 79;
 
             if (pais === 'CO') {
-                // Equivalente comercial en Pesos Colombianos (ej. TRM redondeada comercial)
                 const cop = usd * 4000;
                 const copFormateado = new Intl.NumberFormat('es-CO').format(cop);
                 return { usd, textoMostrar: `$${copFormateado} COP`, subtexto: `($${usd} USD)` };
@@ -274,7 +280,7 @@
             }
         }
 
-        // Dibujar la tabla
+        // 3. DIBUJAR LA TABLA CON LOS DATOS REALES DE MONGODB
         function renderizarTabla() {
             const tbody = document.getElementById('tabla-tenants');
             tbody.innerHTML = '';
@@ -282,40 +288,52 @@
             let mrrTotalUSD = 0;
             let clientesActivos = 0;
 
+            if (clientes.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-slate-400">No hay negocios registrados aún. Haz clic en "+ Dar de Alta Nuevo Cliente".</td></tr>`;
+                return;
+            }
+
             clientes.forEach((c, index) => {
-                const infoTarifa = calcularTarifa(c.modulos, c.pais);
+                // Aseguramos valores por defecto si en la base había un registro antiguo de la Fase 1
+                const modulos = c.modulos || { vet: true, spa: true, shop: true };
+                const pais = c.pais || 'EC';
+                const ciudad = c.ciudad || (pais === 'EC' ? 'Ecuador' : 'Colombia');
+                const tenantId = c.tenantId || c.telefonoWhatsAppId || 'sin-id';
+                const erp = c.erp || 'Excel / CSV Manual';
+
+                const infoTarifa = calcularTarifa(modulos, pais);
                 if (c.activo) {
                     mrrTotalUSD += infoTarifa.usd;
                     clientesActivos++;
                 }
 
-                const badgePais = c.pais === 'EC' 
+                const badgePais = pais === 'EC' 
                     ? `<span class="bg-blue-500/20 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-md text-xs font-bold">🇪🇨 USD · IVA 15%</span>`
                     : `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-md text-xs font-bold">🇨🇴 COP · IVA 19%</span>`;
 
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-800/40 transition ${!c.activo ? 'opacity-50' : ''}">
                         <td class="p-4">
-                            <p class="font-bold text-white">${c.nombre}</p>
-                            <p class="text-xs text-slate-400">📍 ${c.ciudad} · <span class="font-mono text-indigo-400">${c.tenantId}</span></p>
+                            <p class="font-bold text-white">${c.nombreNegocio}</p>
+                            <p class="text-xs text-slate-400">📍 ${ciudad} · <span class="font-mono text-indigo-400">${tenantId}</span></p>
                         </td>
                         <td class="p-4">${badgePais}</td>
                         <td class="p-4">
                             <div class="flex space-x-2">
-                                <button onclick="toggleModulo(${index}, 'vet')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${c.modulos.vet ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
+                                <button onclick="toggleModulo(${index}, 'vet')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${modulos.vet ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
                                     🏥 Vet
                                 </button>
-                                <button onclick="toggleModulo(${index}, 'spa')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${c.modulos.spa ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
+                                <button onclick="toggleModulo(${index}, 'spa')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${modulos.spa ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
                                     ✂️ Spa
                                 </button>
-                                <button onclick="toggleModulo(${index}, 'shop')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${c.modulos.shop ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
+                                <button onclick="toggleModulo(${index}, 'shop')" class="px-2.5 py-1 rounded-md text-xs font-bold border transition ${modulos.shop ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-slate-900 text-slate-600 border-slate-800'}">
                                     🛍️ Shop
                                 </button>
                             </div>
                         </td>
                         <td class="p-4">
                             <span class="text-xs bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300">
-                                🔌 ${c.erp}
+                                🔌 ${erp}
                             </span>
                         </td>
                         <td class="p-4">
@@ -329,7 +347,7 @@
                             </button>
                         </td>
                         <td class="p-4 text-right">
-                            <a href="app-cliente.html" target="_blank" class="text-indigo-400 hover:text-indigo-300 text-xs font-bold border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 rounded-lg transition">
+                            <a href="app-cliente.html?tenantId=${tenantId}" target="_blank" class="text-indigo-400 hover:text-indigo-300 text-xs font-bold border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 rounded-lg transition">
                                 Ver Panel ↗
                             </a>
                         </td>
@@ -337,63 +355,115 @@
                 `;
             });
 
-            // Actualizar las métricas de arriba consolidadas en USD
             document.getElementById('kpi-mrr').innerText = `$${mrrTotalUSD}.00 USD`;
             document.getElementById('kpi-clientes').innerText = clientesActivos;
         }
 
-        // Encender o apagar un módulo haciendo clic sobre la etiqueta
-        function toggleModulo(index, modulo) {
-            clientes[index].modulos[modulo] = !clientes[index].modulos[modulo];
+        // 4. GUARDAR CAMBIO DE MÓDULOS EN VIVO EN MONGODB
+        async function toggleModulo(index, modulo) {
+            const cliente = clientes[index];
+            const tenantId = cliente.tenantId || cliente.telefonoWhatsAppId;
+            if (!cliente.modulos) cliente.modulos = { vet: true, spa: true, shop: true };
+            
+            cliente.modulos[modulo] = !cliente.modulos[modulo];
             renderizarTabla();
+
+            document.getElementById('estado-guardado').innerText = '💾 Guardando cambio en MongoDB...';
+
+            try {
+                await fetch(`${API_URL}/update/${tenantId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modulos: cliente.modulos })
+                });
+                document.getElementById('estado-guardado').innerText = '✅ Módulos actualizados en MongoDB';
+            } catch (err) {
+                alert('Error al guardar en la base de datos');
+            }
         }
 
-        // Suspender o reactivar el bot de WhatsApp si una veterinaria no paga
-        function toggleEstadoCliente(index) {
-            clientes[index].activo = !clientes[index].activo;
-            const estado = clientes[index].activo ? 'REACTIVADO' : 'SUSPENDIDO';
-            alert(`⚡ El servicio de Inteligencia Artificial en WhatsApp para "${clientes[index].nombre}" ha sido ${estado}.`);
+        // 5. SUSPENDER O REACTIVAR EL SERVICIO EN MONGODB
+        async function toggleEstadoCliente(index) {
+            const cliente = clientes[index];
+            const tenantId = cliente.tenantId || cliente.telefonoWhatsAppId;
+            cliente.activo = !cliente.activo;
             renderizarTabla();
+
+            document.getElementById('estado-guardado').innerText = '💾 Actualizando estado del bot...';
+
+            try {
+                await fetch(`${API_URL}/update/${tenantId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ activo: cliente.activo })
+                });
+                const estadoTexto = cliente.activo ? 'REACTIVADO' : 'SUSPENDIDO POR FALTA DE PAGO';
+                document.getElementById('estado-guardado').innerText = `✅ Estado ${estadoTexto} guardado en BD`;
+            } catch (err) {
+                alert('Error al cambiar estado en la base de datos');
+            }
         }
 
         // Control del Modal
         function abrirModal() { document.getElementById('modal-nuevo').classList.remove('hidden'); }
         function cerrarModal() { document.getElementById('modal-nuevo').classList.add('hidden'); }
 
-        // Guardar un nuevo cliente desde el formulario
-        function guardarNuevoCliente() {
-            const nombre = document.getElementById('input-nombre').value.trim();
+        // 6. CREAR NUEVO CLIENTE EN MONGODB ATLAS
+        async function guardarNuevoCliente() {
+            const nombreNegocio = document.getElementById('input-nombre').value.trim();
             const pais = document.getElementById('input-pais').value;
-            const ciudad = document.getElementById('input-ciudad').value.trim() || (pais === 'EC' ? 'Ecuador' : 'Colombia');
+            const ciudad = document.getElementById('input-ciudad').value.trim() || (pais === 'EC' ? 'Quito, Ecuador' : 'Bogotá, Colombia');
             const tenantId = document.getElementById('input-tenant').value.trim();
             const erp = document.getElementById('input-erp').value;
             const vet = document.getElementById('chk-vet').checked;
             const spa = document.getElementById('chk-spa').checked;
             const shop = document.getElementById('chk-shop').checked;
 
-            if (!nombre || !tenantId) {
+            if (!nombreNegocio || !tenantId) {
                 alert("Por favor completa el nombre del negocio y su ID de teléfono de Meta.");
                 return;
             }
 
-            clientes.unshift({
-                id: Date.now(),
-                nombre: nombre,
-                pais: pais,
-                ciudad: ciudad,
-                tenantId: tenantId,
-                modulos: { vet, spa, shop },
-                erp: erp,
-                activo: true
-            });
+            const btn = document.getElementById('btn-guardar-modal');
+            btn.innerText = '⏳ Guardando...';
+            btn.disabled = true;
 
-            cerrarModal();
-            renderizarTabla();
-            alert(`🎉 ¡Cliente "${nombre}" (${pais === 'EC' ? 'Ecuador - IVA 15%' : 'Colombia - IVA 19%'}) creado con éxito!`);
+            try {
+                const respuesta = await fetch(`${API_URL}/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tenantId,
+                        nombreNegocio,
+                        pais,
+                        ciudad,
+                        modulos: { vet, spa, shop },
+                        erp
+                    })
+                });
+
+                const json = await respuesta.json();
+
+                if (json.success) {
+                    cerrarModal();
+                    // Limpiar campos
+                    document.getElementById('input-nombre').value = '';
+                    document.getElementById('input-tenant').value = '';
+                    await cargarTenantsDesdeMongo();
+                    alert(`🎉 ¡"${nombreNegocio}" quedó guardado permanentemente en tu MongoDB Atlas!`);
+                } else {
+                    alert(`⚠️ Atención: ${json.message}`);
+                }
+            } catch (error) {
+                alert("❌ Error de red al intentar guardar el cliente.");
+            } finally {
+                btn.innerText = 'Guardar en MongoDB';
+                btn.disabled = false;
+            }
         }
 
-        // Iniciar la tabla al abrir la página
-        renderizarTabla();
+        // Al abrir la página, descargar inmediatamente los clientes reales de MongoDB
+        cargarTenantsDesdeMongo();
     </script>
 </body>
 </html>
