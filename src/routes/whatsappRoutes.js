@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenAI } = require('@google/genai');
+const { GoogleGenAI } = require('@google/generative-ai');
 const Lead = require('../models/Lead');
 const Contact = require('../models/Contact');
 const Tenant = require('../models/Tenant'); // 👈 Importamos el modelo Multi-Tenant
