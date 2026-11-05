@@ -5,8 +5,9 @@ const Lead = require('../models/Lead');
 const Contact = require('../models/Contact');
 const Tenant = require('../models/Tenant');
 const PromptAssemblerService = require('../services/PromptAssembler');
+// 👇 IMPORTAMOS LAS HERRAMIENTAS DE AGENDA
+const { calendarToolsDefinition, ejecutarHerramientaCalendario } = require('../tools/calendar.tools');
 
-// Inicializamos el SDK oficial y estable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ====================================================
@@ -31,12 +32,11 @@ router.get('/webhook', (req, res) => {
 });
 
 // ====================================================
-// 2. RECEPCIÓN DE MENSAJES DE WHATSAPP (CON MOTOR MODULAR)
+// 2. RECEPCIÓN DE MENSAJES DE WHATSAPP
 // ====================================================
 router.post('/webhook', async (req, res) => {
     try {
         const body = req.body;
-
         if (body.object === 'whatsapp_business_account') {
             for (const entry of body.entry) {
                 for (const change of entry.changes) {
@@ -48,13 +48,11 @@ router.post('/webhook', async (req, res) => {
                         const phoneNumberId = value.metadata.phone_number_id;
 
                         if (msgBody) {
-                            // Procesamos con nuestra función centralizada
                             const resultado = await procesarMensajeAgente({
                                 tenantId: phoneNumberId,
                                 fromPhone: from,
                                 text: msgBody
                             });
-
                             await enviarMensajeWhatsApp(phoneNumberId, from, resultado.respuestaLimpia);
                         }
                     }
@@ -65,20 +63,18 @@ router.post('/webhook', async (req, res) => {
             res.sendStatus(404);
         }
     } catch (error) {
-        console.error('❌ Error crítico en el Webhook de WhatsApp:', error);
+        console.error('❌ Error en Webhook de WhatsApp:', error);
         res.sendStatus(500);
     }
 });
 
 // ====================================================
-// 3. SIMULADOR DIRECTO SIN META (PARA PRUEBAS SIN RETRASOS)
+// 3. SIMULADOR DIRECTO SIN META
 // ====================================================
 router.post('/simulate', async (req, res) => {
     try {
         const { tenantId, fromPhone, text } = req.body;
-        if (!text) {
-            return res.status(400).json({ success: false, message: 'Falta el texto del mensaje' });
-        }
+        if (!text) return res.status(400).json({ success: false, message: 'Falta texto' });
 
         const inicio = Date.now();
         const resultado = await procesarMensajeAgente({
@@ -102,53 +98,31 @@ router.post('/simulate', async (req, res) => {
 });
 
 // ====================================================
-// 4. NÚCLEO COGNITIVO COMPARTIDO (WHATSAPP + SIMULADOR)
+// 4. NÚCLEO COGNITIVO CON FUNCTION CALLING
 // ====================================================
 async function procesarMensajeAgente({ tenantId, fromPhone, text }) {
-    // A. Buscar Tenant en MongoDB (usando .lean() para mayor velocidad de lectura)
     let tenant = await Tenant.findOne({ tenantId }).lean();
     if (!tenant) {
-        tenant = {
-            tenantId,
-            nombreNegocio: "Clínica & Spa Demo",
-            pais: "EC",
-            ciudad: "Quito",
-            activo: true,
-            modulos: { vet: true, spa: true, shop: true }
-        };
+        tenant = { tenantId, nombreNegocio: "Clínica Demo", pais: "EC", activo: true, modulos: { vet: true, spa: true, shop: true } };
     }
 
-    // B. Corte automático si no ha pagado
     if (tenant.activo === false) {
-        return {
-            tenantName: tenant.nombreNegocio,
-            respuestaLimpia: "Hola. En este momento nuestros canales automáticos de atención se encuentran temporalmente inactivos. Un asesor se comunicará contigo pronto.",
-            leadCapturado: null
-        };
+        return { tenantName: tenant.nombreNegocio, respuestaLimpia: "Nuestros canales automáticos están inactivos por el momento.", leadCapturado: null };
     }
 
-    // C. Obtener memoria conversacional (máximo 8 mensajes)
     let contacto = await Contact.findOne({ phoneNumber: fromPhone, tenantId });
-    if (!contacto) {
-        contacto = new Contact({ phoneNumber: fromPhone, tenantId, history: [] });
-    }
+    if (!contacto) contacto = new Contact({ phoneNumber: fromPhone, tenantId, history: [] });
 
     contacto.history.push({ role: 'user', content: text });
-    if (contacto.history.length > 8) {
-        contacto.history = contacto.history.slice(contacto.history.length - 8);
-    }
+    if (contacto.history.length > 8) contacto.history = contacto.history.slice(contacto.history.length - 8);
 
-    // D. Ensamblar instrucciones específicas según Feature Flags del negocio
     const systemInstruction = PromptAssemblerService.buildSystemInstruction(tenant);
 
-    // E. Llamar a Gemini con Bucle de Modelos (Sistema de Rescate/Fallback)
     let respuestaIA = "¡Hola! Gracias por escribirnos. En breve te atendemos.";
     let exito = false;
-    
-    // Lista de modelos oficiales y estables. Si falla el primero, salta al segundo de inmediato.
     const modelosSeguros = ['gemini-3.8-flash', 'gemini-3.5-flash'];
 
-    const contentsForGemini = contacto.history.map(h => ({
+    let contentsForGemini = contacto.history.map(h => ({
         role: h.role === 'user' ? 'user' : 'model',
         parts: [{ text: h.content }]
     }));
@@ -158,90 +132,86 @@ async function procesarMensajeAgente({ tenantId, fromPhone, text }) {
             const model = genAI.getGenerativeModel({
                 model: nombreModelo,
                 systemInstruction: systemInstruction,
-                generationConfig: {
-                    temperature: 0.4,
-                    maxOutputTokens: 350
-                }
+                // 👇 INYECTAMOS LAS HERRAMIENTAS AQUÍ
+                tools: [{ functionDeclarations: calendarToolsDefinition }],
+                generationConfig: { temperature: 0.4, maxOutputTokens: 350 }
             });
 
+            // Primera llamada a la IA
             const result = await model.generateContent({ contents: contentsForGemini });
             const response = await result.response;
             
-            if (response && response.text()) {
+            // 👇 VERIFICAMOS SI LA IA DECIDIÓ USAR UNA HERRAMIENTA
+            if (response.functionCalls && response.functionCalls().length > 0) {
+                const call = response.functionCalls()[0];
+                console.log(`🤖 IA solicitó ejecutar herramienta: ${call.name}`);
+                
+                // Ejecutamos la función en nuestra base de datos
+                const toolResult = await ejecutarHerramientaCalendario(call.name, call.args, tenantId, fromPhone);
+                
+                // Añadimos el proceso al historial temporal de la IA
+                contentsForGemini.push({
+                    role: 'model',
+                    parts: [{ functionCall: { name: call.name, args: call.args } }]
+                });
+                contentsForGemini.push({
+                    role: 'function',
+                    parts: [{ functionResponse: { name: call.name, response: toolResult } }]
+                });
+
+                // Segunda llamada a la IA con los resultados de la base de datos
+                const finalResult = await model.generateContent({ contents: contentsForGemini });
+                const finalResponse = await finalResult.response;
+                
+                if (finalResponse && finalResponse.text()) {
+                    respuestaIA = finalResponse.text();
+                    exito = true;
+                    break;
+                }
+            } 
+            // Si la IA respondió con texto normal
+            else if (response && response.text()) {
                 respuestaIA = response.text();
                 exito = true;
-                break; // Rompe el bucle si contestó bien
+                break;
             }
         } catch (geminiError) {
             console.warn(`⚠️ Intento fallido con ${nombreModelo}:`, geminiError.message);
-            continue; // Si falla, intenta silenciosamente con el siguiente modelo de la lista
+            continue;
         }
     }
 
-    // Si todos los modelos fallan por caída de Google
-    if (!exito) {
-        respuestaIA = "Hola, en este momento experimentamos un alto volumen de consultas. Hemos recibido tu mensaje y un asesor te atenderá enseguida.";
-    }
+    if (!exito) respuestaIA = "Experimentamos un alto volumen de consultas. Un asesor te atenderá enseguida.";
 
-    // F. Guardar en historial
     contacto.history.push({ role: 'model', content: respuestaIA });
     await contacto.save();
 
-    // G. Interceptor de Leads y Urgencias Médicas (Zero-Latency)
     let leadCapturado = null;
     if (respuestaIA.includes('[NUEVO_LEAD|')) {
         try {
             const partes = respuestaIA.match(/\[NUEVO_LEAD\|([^\|]+)\|([^\|]+)\|([^\]]+)\]/);
             if (partes) {
                 leadCapturado = await Lead.create({
-                    tenantId,
-                    phoneNumber: fromPhone,
-                    name: partes[1].trim(),
-                    businessType: partes[2].trim(),
-                    summary: partes[3].trim(),
-                    status: partes[2].toUpperCase().includes('URGENCIA') ? '🚨 URGENCIA' : 'Pendiente'
+                    tenantId, phoneNumber: fromPhone, name: partes[1].trim(), businessType: partes[2].trim(), summary: partes[3].trim(), status: partes[2].toUpperCase().includes('URGENCIA') ? '🚨 URGENCIA' : 'Pendiente'
                 });
             }
-        } catch (leadErr) {
-            console.error('❌ Error guardando lead:', leadErr);
-        }
-        // Limpiamos la etiqueta para que el cliente final no la vea
+        } catch (e) { console.error(e); }
         respuestaIA = respuestaIA.replace(/\[NUEVO_LEAD\|[^\]]+\]/g, '').trim();
     }
 
-    return {
-        tenantName: tenant.nombreNegocio,
-        respuestaLimpia: respuestaIA,
-        leadCapturado
-    };
+    return { tenantName: tenant.nombreNegocio, respuestaLimpia: respuestaIA, leadCapturado };
 }
 
-// ====================================================
-// 5. FUNCIÓN AUXILIAR DE ENVÍO A META
-// ====================================================
 async function enviarMensajeWhatsApp(phoneNumberId, to, text) {
     const fetch = (await import('node-fetch')).default;
-    const TOKEN_META = process.env.WHATSAPP_TOKEN; 
-    if (!TOKEN_META) return;
-
+    if (!process.env.WHATSAPP_TOKEN) return;
     try {
-        const url = `https://graph.facebook.com/v25.0/${phoneNumberId}/messages`;
-        await fetch(url, {
+        await fetch(`https://graph.facebook.com/v25.0/${phoneNumberId}/messages`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${TOKEN_META}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                messaging_product: 'whatsapp',
-                to: to,
-                type: 'text',
-                text: { body: text }
-            })
+            headers: { 'Authorization': `Bearer ${process.env.WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messaging_product: 'whatsapp', to: to, type: 'text', text: { body: text } })
         });
-    } catch (error) {
-        console.error('❌ Error enviando mensaje a WhatsApp:', error);
-    }
+    } catch (e) { console.error(e); }
 }
 
 module.exports = router;
