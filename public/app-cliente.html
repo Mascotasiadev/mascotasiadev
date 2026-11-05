@@ -89,6 +89,11 @@
                         <i class="fa-solid fa-users-viewfinder w-5 text-center"></i>
                         <span>CRM Prospectos (IA)</span>
                     </button>
+                    <!-- 👇 NUEVO BOTÓN: Catálogo y Tiempos de IA 👇 -->
+                    <button onclick="mostrarVista('vista-catalogo', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
+                        <i class="fa-solid fa-clock-rotate-left w-5 text-center"></i>
+                        <span>Catálogo y Tiempos</span>
+                    </button>
                     <button onclick="mostrarVista('vista-campanas', this)" class="nav-btn w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 transition">
                         <i class="fa-solid fa-bullhorn w-5 text-center"></i>
                         <span>Campañas WhatsApp</span>
@@ -188,6 +193,63 @@
                         <tbody id="tabla-crm-body" class="divide-y divide-slate-100 text-sm">
                             <tr>
                                 <td colspan="4" class="p-6 text-center text-slate-400">Cargando prospectos del negocio...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 👇 NUEVA VISTA: CATÁLOGO DE SERVICIOS Y TIEMPOS 👇 -->
+            <section id="vista-catalogo" class="hidden animate-fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-slate-800">Catálogo y Tiempos de IA</h1>
+                        <p class="text-sm text-slate-500">Define cuánto duran tus servicios para que la IA agende sin cruzar horarios.</p>
+                    </div>
+                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Nuevo Servicio</span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200 tracking-wider">
+                                <th class="p-4 font-semibold">Servicio / Módulo</th>
+                                <th class="p-4 font-semibold">Precio Base</th>
+                                <th class="p-4 font-semibold">Duración (Minutos)</th>
+                                <th class="p-4 font-semibold text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Ejemplo Pet Spa -->
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-800">Baño Raza Grande / Deslanado</div>
+                                    <div class="text-xs text-purple-600 font-bold mt-1">MÓDULO PET SPA</div>
+                                </td>
+                                <td class="p-4">$ 25.00</td>
+                                <td class="p-4">
+                                    <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded font-mono text-xs font-bold">120 min</span>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <button class="text-slate-400 hover:text-blue-600 transition"><i class="fa-solid fa-pen"></i> Editar</button>
+                                </td>
+                            </tr>
+                            <!-- Ejemplo Veterinaria -->
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-4">
+                                    <div class="font-bold text-slate-800">Consulta de Rutina</div>
+                                    <div class="text-xs text-emerald-600 font-bold mt-1">MÓDULO VETERINARIA</div>
+                                </td>
+                                <td class="p-4">$ 35.00</td>
+                                <td class="p-4">
+                                    <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-mono text-xs font-bold">45 min</span>
+                                </td>
+                                <td class="p-4 text-right">
+                                    <button class="text-slate-400 hover:text-blue-600 transition"><i class="fa-solid fa-pen"></i> Editar</button>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
