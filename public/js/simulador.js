@@ -68,7 +68,7 @@ window.enviarMensajeSimulado = async function() {
         chatMessages.innerHTML += `<div id="${loadingId}" class="text-gray-400 text-xs self-start italic px-2 mt-1">La IA está escribiendo...</div>`;
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
-        const response = await fetch('/webhook/simulate', {
+        const response = await fetch('/api/whatsapp/simulate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
