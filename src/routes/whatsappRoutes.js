@@ -6,7 +6,7 @@ const Contact = require('../models/Contact');
 const Tenant = require('../models/Tenant');
 const PromptAssemblerService = require('../services/PromptAssembler');
 
-// Inicializamos el SDK probado y estable
+// Inicializamos el SDK oficial y estable
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // ====================================================
@@ -48,7 +48,7 @@ router.post('/webhook', async (req, res) => {
                         const phoneNumberId = value.metadata.phone_number_id;
 
                         if (msgBody) {
-                            // Procesamos con nuestra función centralizada de alta velocidad
+                            // Procesamos con nuestra función centralizada
                             const resultado = await procesarMensajeAgente({
                                 tenantId: phoneNumberId,
                                 fromPhone: from,
@@ -141,38 +141,53 @@ async function procesarMensajeAgente({ tenantId, fromPhone, text }) {
     // D. Ensamblar instrucciones específicas según Feature Flags del negocio
     const systemInstruction = PromptAssemblerService.buildSystemInstruction(tenant);
 
-    // E. Llamar a Gemini optimizado para baja latencia
+    // E. Llamar a Gemini con Bucle de Modelos (Sistema de Rescate/Fallback)
     let respuestaIA = "¡Hola! Gracias por escribirnos. En breve te atendemos.";
-    try {
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash',
-            systemInstruction: systemInstruction,
-            generationConfig: {
-                temperature: 0.4, // Más preciso, menos alucinaciones y más rápido
-                maxOutputTokens: 350
+    let exito = false;
+    
+    // Lista de modelos oficiales y estables. Si falla el primero, salta al segundo de inmediato.
+    const modelosSeguros = ['gemini-3.8-flash', 'gemini-3.5-flash'];
+
+    const contentsForGemini = contacto.history.map(h => ({
+        role: h.role === 'user' ? 'user' : 'model',
+        parts: [{ text: h.content }]
+    }));
+
+    for (const nombreModelo of modelosSeguros) {
+        try {
+            const model = genAI.getGenerativeModel({
+                model: nombreModelo,
+                systemInstruction: systemInstruction,
+                generationConfig: {
+                    temperature: 0.4,
+                    maxOutputTokens: 350
+                }
+            });
+
+            const result = await model.generateContent({ contents: contentsForGemini });
+            const response = await result.response;
+            
+            if (response && response.text()) {
+                respuestaIA = response.text();
+                exito = true;
+                break; // Rompe el bucle si contestó bien
             }
-        });
-
-        const contentsForGemini = contacto.history.map(h => ({
-            role: h.role === 'user' ? 'user' : 'model',
-            parts: [{ text: h.content }]
-        }));
-
-        const result = await model.generateContent({ contents: contentsForGemini });
-        const response = await result.response;
-        if (response && response.text()) {
-            respuestaIA = response.text();
+        } catch (geminiError) {
+            console.warn(`⚠️ Intento fallido con ${nombreModelo}:`, geminiError.message);
+            continue; // Si falla, intenta silenciosamente con el siguiente modelo de la lista
         }
-    } catch (geminiError) {
-        console.error('❌ Error en Gemini:', geminiError.message);
-        respuestaIA = "Hola, estamos procesando tu solicitud. Un asesor te atenderá enseguida.";
+    }
+
+    // Si todos los modelos fallan por caída de Google
+    if (!exito) {
+        respuestaIA = "Hola, en este momento experimentamos un alto volumen de consultas. Hemos recibido tu mensaje y un asesor te atenderá enseguida.";
     }
 
     // F. Guardar en historial
     contacto.history.push({ role: 'model', content: respuestaIA });
     await contacto.save();
 
-    // G. Interceptor de Leads y Urgencias Médicas
+    // G. Interceptor de Leads y Urgencias Médicas (Zero-Latency)
     let leadCapturado = null;
     if (respuestaIA.includes('[NUEVO_LEAD|')) {
         try {
@@ -190,6 +205,7 @@ async function procesarMensajeAgente({ tenantId, fromPhone, text }) {
         } catch (leadErr) {
             console.error('❌ Error guardando lead:', leadErr);
         }
+        // Limpiamos la etiqueta para que el cliente final no la vea
         respuestaIA = respuestaIA.replace(/\[NUEVO_LEAD\|[^\]]+\]/g, '').trim();
     }
 
