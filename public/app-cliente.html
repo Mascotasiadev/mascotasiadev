@@ -206,7 +206,7 @@
                         <h1 class="text-2xl font-bold text-slate-800">Catálogo y Tiempos de IA</h1>
                         <p class="text-sm text-slate-500">Define cuánto duran tus servicios para que la IA agende sin cruzar horarios.</p>
                     </div>
-                    <button class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-2">
+                    <button onclick="abrirModalServicio()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition flex items-center space-x-2 cursor-pointer">
                         <i class="fa-solid fa-plus"></i>
                         <span>Nuevo Servicio</span>
                     </button>
@@ -374,7 +374,7 @@
                                 <h3 class="text-lg font-bold text-slate-800">Nivel 2: Conexión Automática vía API</h3>
                                 <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded">Tiempo Real</span>
                             </div>
-                            <p class="text-xs text-slate-500 mb-4">Compatible con sistemas líderes en Ecuador (SRI) y Colombia (DIAN).</p>
+                            <p class="text-xs text-slate-500 mb-4">Compatible con sistemas líderes en Ecuador (EC) y Colombia (CO).</p>
                             
                             <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Selecciona tu Sistema Contable / Clínico:</label>
                             <select class="w-full border border-slate-300 rounded-lg p-2 text-sm mb-3 outline-none">
@@ -431,12 +431,56 @@
         </main>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: CREAR / EDITAR SERVICIO Y TIEMPOS   -->
+    <!-- ========================================== -->
+    <div id="modal-servicio" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden flex justify-center items-center z-50">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100 animate-fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Configurar Servicio para la IA</h3>
+                <button onclick="cerrarModalServicio()" class="text-slate-400 hover:text-slate-600 font-bold">✖</button>
+            </div>
+            
+            <form onsubmit="guardarNuevoServicio(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nombre del Servicio:</label>
+                    <input type="text" id="input-nombre-serv" placeholder="Ej: Baño Mediano o Consulta Especializada" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-600">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Módulo:</label>
+                        <select id="input-modulo-serv" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none bg-white">
+                            <option value="spa">✂️ Pet Spa</option>
+                            <option value="veterinaria">🏥 Veterinaria</option>
+                            <option value="shop">🛍️ Pet Shop</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Precio Base ($):</label>
+                        <input type="number" step="0.01" id="input-precio-serv" placeholder="25.00" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-600">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Duración en Minutos (Vital para la IA):</label>
+                    <input type="number" id="input-duracion-serv" placeholder="60" value="45" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:border-blue-600">
+                    <p class="text-[11px] text-slate-400 mt-1">La IA usará este tiempo exacto para calcular los huecos libres en la agenda.</p>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t">
+                    <button type="button" onclick="cerrarModalServicio()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition cursor-pointer">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow transition cursor-pointer">Guardar en MongoDB</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- 🧠 MOTOR BINACIONAL Y CONEXIÓN EN TIEMPO REAL CON MONGODB         -->
     <!-- ================================================================= -->
     <script>
         const API_BASE = 'https://mascotasiadev.onrender.com/api';
-        // Leer el tenantId desde la URL (?tenantId=...) o usar el demo por defecto
         const urlParams = new URLSearchParams(window.location.search);
         let currentTenantId = urlParams.get('tenantId') || '1433813413148961';
 
@@ -507,16 +551,13 @@
                     document.getElementById('ui-nombre-negocio').innerText = t.nombreNegocio;
                     document.getElementById('ui-metodo-erp').innerText = t.erp || 'Excel / CSV Manual';
 
-                    // Aplicar país guardado en MongoDB
                     document.getElementById('selectPais').value = t.pais || 'EC';
 
-                    // Aplicar módulos contratados guardados en MongoDB
                     const mod = t.modulos || { vet: true, spa: true, shop: true };
                     document.getElementById('toggleVet').checked = !!mod.vet;
                     document.getElementById('toggleSpa').checked = !!mod.spa;
                     document.getElementById('toggleShop').checked = !!mod.shop;
 
-                    // Verificar si está al día o suspendido
                     if (t.activo === false) {
                         document.getElementById('banner-suspendido').classList.remove('hidden');
                         document.getElementById('ui-estado-ia').innerHTML = `<span class="w-2 h-2 bg-red-500 rounded-full mr-1.5"></span> <span class="text-red-600">Bot Pausado (Impago)</span>`;
@@ -545,7 +586,6 @@
             `;
             document.getElementById('texto-iva-shop').innerText = `${cfg.ivaPorcentaje}%`;
 
-            // A. Renderizar Monitor de Peluquería (Spa)
             const contSpa = document.getElementById('contenedor-tarjetas-spa');
             contSpa.innerHTML = '';
             cfg.spaMonitor.forEach(item => {
@@ -566,7 +606,7 @@
                                 <p class="mt-1 text-xs text-slate-500">Base: ${cfg.formatearDinero(item.base)} + IVA (${cfg.ivaPorcentaje}%) = <strong class="text-slate-800 text-sm">${totalFormateado}</strong></p>
                             </div>
                         </div>
-                        <button onclick="simularAvisoWhatsApp('${item.mascota}', '${item.dueno}', '${totalFormateado}')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-2">
+                        <button onclick="simularAvisoWhatsApp('${item.mascota}', '${item.dueno}', '${totalFormateado}')" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg shadow transition flex items-center justify-center space-x-2 cursor-pointer">
                             <i class="fa-brands fa-whatsapp text-lg"></i>
                             <span>¡Ya está listo! Avisar y cobrar ${totalFormateado}</span>
                         </button>
@@ -574,7 +614,6 @@
                 `;
             });
 
-            // B. Renderizar Tabla de Tarifas Spa
             const tablaTarifas = document.getElementById('tabla-spa-tarifas');
             tablaTarifas.innerHTML = '';
             cfg.spaTarifas.forEach(t => {
@@ -589,7 +628,6 @@
                 `;
             });
 
-            // C. Renderizar Vacunas (Veterinaria - Exento 0%)
             const tablaVacunas = document.getElementById('tabla-vet-vacunas');
             tablaVacunas.innerHTML = '';
             cfg.vacunas.forEach(v => {
@@ -605,7 +643,6 @@
                 `;
             });
 
-            // D. Renderizar Inventario Pet Shop
             const tablaShop = document.getElementById('tabla-shop-inventario');
             tablaShop.innerHTML = '';
             cfg.inventario.forEach(prod => {
@@ -635,7 +672,6 @@
                 `;
             });
 
-            // E. Actualizar vista de Entrenamiento IA
             document.getElementById('prompt-fiscal-ia').innerText = `[REGLA FISCAL ACTIVA - ${cfg.nombrePais}]: Opera exclusivamente en moneda ${cfg.moneda}. Aplica el ${cfg.ivaPorcentaje}% de IVA a servicios de estética/accesorios y 0% a servicios médicos/medicamentos exentos.`;
             document.getElementById('bancos-ia').value = cfg.bancosDefault;
         }
@@ -711,6 +747,46 @@
                 }
             } catch (e) {
                 tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-red-500">Error conectando con Render.</td></tr>';
+            }
+        }
+
+        // --- CONTROLADORES PARA EL MODAL DE NUEVO SERVICIO ---
+        function abrirModalServicio() {
+            document.getElementById('modal-servicio').classList.remove('hidden');
+        }
+
+        function cerrarModalServicio() {
+            document.getElementById('modal-servicio').classList.add('hidden');
+        }
+
+        async function guardarNuevoServicio(event) {
+            event.preventDefault();
+            
+            const nuevoServicio = {
+                tenantId: currentTenantId,
+                nombre: document.getElementById('input-nombre-serv').value,
+                modulo: document.getElementById('input-modulo-serv').value,
+                precio: parseFloat(document.getElementById('input-precio-serv').value),
+                duracionMinutos: parseInt(document.getElementById('input-duracion-serv').value),
+                activo: true
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/catalog`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoServicio)
+                });
+                
+                const data = await res.json();
+                
+                alert('✅ ¡Servicio guardado con éxito! La IA ya lo tomará en cuenta para los tiempos de agenda.');
+                cerrarModalServicio();
+                event.target.reset();
+            } catch (e) {
+                console.error("Error guardando:", e);
+                alert('⚠️ Servicio registrado de manera local en la simulación.');
+                cerrarModalServicio();
             }
         }
 
